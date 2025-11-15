@@ -5,14 +5,16 @@
 <title>Driver Scan Screen</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- QR generator -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
     body {
         margin:0;
         padding:0;
-        background:#0f0f0f;
+        background:#0d0d0d;
         color:white;
         font-family:Arial, sans-serif;
         display:flex;
@@ -20,33 +22,35 @@
         align-items:center;
         text-align:center;
         height:100vh;
-        padding-top:50px;
+        padding-top:40px;
     }
     h1 {
         font-size:3rem;
-        font-weight:900;
         margin:0;
+        font-weight:800;
     }
     h2 {
-        margin:10px 0 30px;
-        font-size:1.4rem;
-        opacity:0.75;
+        font-size:1.3rem;
+        margin:10px 0 35px;
+        opacity:0.7;
     }
     #qrBox {
         background:white;
         width:260px;
         height:260px;
+        border-radius:20px;
         display:flex;
         align-items:center;
         justify-content:center;
-        border-radius:20px;
-        box-shadow:0 0 25px rgba(0,0,0,0.4);
-        margin-bottom:30px;
+        box-shadow:0 0 25px rgba(0,0,0,0.5);
     }
     #status {
-        margin-top:10px;
-        font-size:1.2rem;
-        opacity:0.7;
+        margin-top:25px;
+        font-size:1.05rem;
+        opacity:0.85;
+        word-break:break-all;
+        padding:0 20px;
+        max-width:95%;
     }
 </style>
 </head>
@@ -62,7 +66,7 @@
 
 <script>
 /* -------------------------------------------------------------
-   SUPABASE CONNECTION (PRODUCTION)
+   SUPABASE CONNECTION (PROD)
 ------------------------------------------------------------- */
 const db = supabase.createClient(
   "https://splcucorowqjxeeseolq.supabase.co",
@@ -70,29 +74,31 @@ const db = supabase.createClient(
 );
 
 /* -------------------------------------------------------------
-   ALWAYS USE PRODUCTION DOMAIN FOR QR
+   ALWAYS USE PRODUCTION DOMAIN
 ------------------------------------------------------------- */
 const PROD_BASE = "https://lorry-bay-system.vercel.app";
 
 /* -------------------------------------------------------------
-   RENDER QR
+   RENDER QR + SHOW URL BELOW
 ------------------------------------------------------------- */
 function showQR(vehicleId) {
     const finalUrl = `${PROD_BASE}/driver.html?uid=${vehicleId}`;
-    const box = document.getElementById("qrBox");
 
+    const box = document.getElementById("qrBox");
     box.innerHTML = "";
+
     new QRCode(box, {
         text: finalUrl,
         width: 240,
         height: 240
     });
 
-    document.getElementById("status").innerText = "Ready — driver can scan now";
+    // Show URL under QR (as you wanted restored)
+    document.getElementById("status").innerText = finalUrl;
 }
 
 /* -------------------------------------------------------------
-   REALTIME WATCHER — NEW VEHICLE CHECK-IN
+   REALTIME WATCH — NEW VEHICLE ARRIVALS
 ------------------------------------------------------------- */
 db.channel("vehicleInserts")
   .on("postgres_changes", {
