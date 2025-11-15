@@ -142,7 +142,7 @@ document.getElementById("status").innerText = m[lang].waiting;
    ============================================================= */
 function showQR(vehicleId) {
 
-    const url = `http://127.0.0.1:5500/driver.html?uid=${vehicleId}`;
+    const url = `https://lorry-bay-system.vercel.app/driver.html?uid=${vehicleId}`;
 
     document.getElementById("qrBox").innerHTML = "";
 
@@ -180,3 +180,4 @@ db.channel("vehicleInserts")
 
 </body>
 </html>
+
