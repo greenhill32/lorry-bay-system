@@ -5,60 +5,48 @@
 <title>Driver Scan Screen</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Supabase + QR libraries -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
     body {
-        margin: 0;
-        padding: 0;
-        background: #111;
-        color: white;
-        font-family: Arial, sans-serif;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        flex-direction: column;
-        text-align: center;
+        margin:0;
+        padding:0;
+        background:#0f0f0f;
+        color:white;
+        font-family:Arial, sans-serif;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        text-align:center;
+        height:100vh;
+        padding-top:50px;
     }
-
     h1 {
-        font-size: 3rem;
-        margin-bottom: 10px;
+        font-size:3rem;
+        font-weight:900;
+        margin:0;
     }
-
     h2 {
-        margin-top: 0;
-        opacity: 0.8;
-        font-size: 1.4rem;
-        margin-bottom: 30px;
+        margin:10px 0 30px;
+        font-size:1.4rem;
+        opacity:0.75;
     }
-
     #qrBox {
-        padding: 20px;
-        background: white;
-        border-radius: 15px;
-        width: 260px;
-        height: 260px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 25px;
+        background:white;
+        width:260px;
+        height:260px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        border-radius:20px;
+        box-shadow:0 0 25px rgba(0,0,0,0.4);
+        margin-bottom:30px;
     }
-
-    #urlText {
-        font-size: 1rem;
-        opacity: 0.7;
-        word-break: break-all;
-        margin-bottom: 10px;
-    }
-
     #status {
-        margin-top: 20px;
-        font-size: 1.2rem;
-        opacity: 0.6;
+        margin-top:10px;
+        font-size:1.2rem;
+        opacity:0.7;
     }
 </style>
 </head>
@@ -69,115 +57,54 @@
 <h2>To view your bay time & updates</h2>
 
 <div id="qrBox"></div>
-<div id="urlText"></div>
 
 <div id="status">Waiting for next check-in…</div>
 
 <script>
-/* =============================================================
-   SUPABASE SETUP
-   ============================================================= */
+/* -------------------------------------------------------------
+   SUPABASE CONNECTION (PRODUCTION)
+------------------------------------------------------------- */
 const db = supabase.createClient(
   "https://splcucorowqjxeeseolq.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwbGN1Y29yb3dxanhlZXNlb2xxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTExMjUsImV4cCI6MjA3ODYyNzEyNX0.R-Fm04UtBOr9OBWHnS1fhk6SnfSm7f3ZrFrQdzO1Q4Y"
 );
 
+/* -------------------------------------------------------------
+   ALWAYS USE PRODUCTION DOMAIN FOR QR
+------------------------------------------------------------- */
+const PROD_BASE = "https://lorry-bay-system.vercel.app";
 
-/* =============================================================
-   LANGUAGE PACKS
-   ============================================================= */
-const m = {
-    en: {
-        title: "SCAN THIS QR",
-        subtitle: "To view your bay time & updates",
-        ready: "Ready — driver can scan now",
-        waiting: "Waiting for next check-in…"
-    },
-    ro: {
-        title: "SCANEAZĂ CODUL QR",
-        subtitle: "Pentru a vedea timpul și actualizările",
-        ready: "Gata — șoferul poate scana",
-        waiting: "În așteptare pentru următoarea înregistrare…"
-    },
-    pl: {
-        title: "ZESKANUJ TEN KOD QR",
-        subtitle: "Aby zobaczyć czas i aktualizacje",
-        ready: "Gotowe — kierowca może skanować",
-        waiting: "Oczekiwanie na kolejne zgłoszenie…"
-    },
-    lt: {
-        title: "NUSKAITYKITE QR KODĄ",
-        subtitle: "Norėdami pamatyti laiką ir naujienas",
-        ready: "Paruošta — vairuotojas gali nuskaityti",
-        waiting: "Laukiama kito įregistravimo…"
-    },
-    bg: {
-        title: "СКАНИРАЙ ТОЗИ QR",
-        subtitle: "За да видите времето и актуализациите",
-        ready: "Готово — шофьорът може да сканира",
-        waiting: "Изчакване на следващото вписване…"
-    },
-    hu: {
-        title: "SZKENNELD BE A QR KÓDOT",
-        subtitle: "A várakozási idő és frissítések megtekintéséhez",
-        ready: "Kész — a sofőr be tudja szkennelni",
-        waiting: "Várakozás a következő bejelentkezésre…"
-    }
-};
-
-
-/* =============================================================
-   LANGUAGE DETECTION
-   ============================================================= */
-let lang = navigator.language?.substring(0,2) || "en";
-if (!m[lang]) lang = "en";
-
-document.querySelector("h1").innerText = m[lang].title;
-document.querySelector("h2").innerText = m[lang].subtitle;
-document.getElementById("status").innerText = m[lang].waiting;
-
-
-/* =============================================================
-   QR DISPLAY FUNCTION
-   ============================================================= */
+/* -------------------------------------------------------------
+   RENDER QR
+------------------------------------------------------------- */
 function showQR(vehicleId) {
+    const finalUrl = `${PROD_BASE}/driver.html?uid=${vehicleId}`;
+    const box = document.getElementById("qrBox");
 
-    const url = `https://lorry-bay-system.vercel.app/driver.html?uid=${vehicleId}`;
-
-    document.getElementById("qrBox").innerHTML = "";
-
-    new QRCode(document.getElementById("qrBox"), {
-        text: url,
+    box.innerHTML = "";
+    new QRCode(box, {
+        text: finalUrl,
         width: 240,
         height: 240
     });
 
-    document.getElementById("urlText").innerText = url;
-
-    document.getElementById("status").innerText = m[lang].ready;
+    document.getElementById("status").innerText = "Ready — driver can scan now";
 }
 
-
-/* =============================================================
-   REALTIME LISTENER
-   Fires instantly when a new lorry is checked in
-   ============================================================= */
+/* -------------------------------------------------------------
+   REALTIME WATCHER — NEW VEHICLE CHECK-IN
+------------------------------------------------------------- */
 db.channel("vehicleInserts")
   .on("postgres_changes", {
       event: "INSERT",
       schema: "public",
       table: "vehicles"
   }, payload => {
-
       const id = payload.new.id;
-      document.getElementById("status").innerText = m[lang].waiting;
-
       showQR(id);
   })
   .subscribe();
-
 </script>
 
 </body>
 </html>
-
