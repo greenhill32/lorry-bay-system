@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Add Operator</title>
+</head>
+<body>
+
+<h2>Add Operator</h2>
+
+<label>Name</label>
+<input id="name" placeholder="Jane Doe">
+
+<label>PIN (optional)</label>
+<input id="pin" placeholder="1234">
+
+<label>Role</label>
+<select id="role">
+  <option value="gatehouse">Gatehouse</option>
+  <option value="goodsout">Goods Out</option>
+</select>
+
+<button onclick="addOp()">Add User</button>
+
+<div id="msg"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const supabaseUrl = "https://splcucorowqjxeeseolq.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwbGN1Y29yb3dxanhlZXNlb2xxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTExMjUsImV4cCI6MjA3ODYyNzEyNX0.R-Fm04UtBOr9OBWHnS1fhk6SnfSm7f3ZrFrQdzO1Q4Y";
+const db = supabase.createClient(supabaseUrl, supabaseKey);
+
+async function addOp() {
+  const name = document.getElementById("name").value.trim();
+  const pin = document.getElementById("pin").value.trim();
+  const role = document.getElementById("role").value;
+
+  if (!name) {
+    document.getElementById("msg").textContent = "Name is required";
+    return;
+  }
+
+  const { error } = await db.from("operators").insert({
+    name, pin_code: pin, role
+  });
+
+  if (error) {
+    document.getElementById("msg").textContent = error.message;
+  } else {
+    document.getElementById("msg").textContent = "Added!";
+  }
+}
+</script>
+
+</body>
+</html>

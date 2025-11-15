@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LRS Pager Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 15px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .pager-form {
+            background: #333;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        
+        .form-group {
+            margin-bottom: 12px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #4CAF50;
+        }
+        
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 16px;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .page-button {
+            width: 100%;
+            padding: 12px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .page-button:hover {
+            background: #45a049;
+        }
+        
+        .page-button:active {
+            transform: scale(0.98);
+        }
+        
+        .status-message {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .status-message.success {
+            background: #4CAF50;
+            display: block;
+        }
+        
+        .status-message.error {
+            background: #f44336;
+            display: block;
+        }
+        
+        .info-text {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="pager-form">
+        <div class="form-group">
+            <label for="pagerNumber">Pager Number</label>
+            <input 
+                type="text" 
+                id="pagerNumber" 
+                placeholder="Enter pager number..."
+                readonly
+            >
+        </div>
+        
+        <div class="form-group">
+            <label for="registration">Registration</label>
+            <input 
+                type="text" 
+                id="registration" 
+                placeholder="Vehicle reg..."
+                readonly
+            >
+            <div class="info-text">Auto-filled from main dashboard</div>
+        </div>
+        
+        <button class="page-button" onclick="sendPage()">
+            📟 SEND PAGE
+        </button>
+        
+        <div id="statusMessage" class="status-message"></div>
+    </div>
+
+    <script>
+        let currentPagerNumber = '';
+        let currentRegistration = '';
+        
+        // Listen for messages from parent window
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'PAGE_DRIVER') {
+                currentPagerNumber = event.data.pagerNumber;
+                currentRegistration = event.data.registration;
+                
+                // Fill the form
+                document.getElementById('pagerNumber').value = currentPagerNumber;
+                document.getElementById('registration').value = currentRegistration;
+                
+                // Clear any previous status
+                const status = document.getElementById('statusMessage');
+                status.className = 'status-message';
+                status.textContent = '';
+            }
+        });
+        
+        function sendPage() {
+            const pagerNum = document.getElementById('pagerNumber').value;
+            const reg = document.getElementById('registration').value;
+            
+            if (!pagerNum) {
+                showStatus('Please select a driver from the main dashboard', 'error');
+                return;
+            }
+            
+            // Show success
+            showStatus(`✓ Paged driver ${reg} (Pager ${pagerNum})`, 'success');
+            
+            // In REAL implementation, this is where you'd:
+            // 1. Either auto-submit the actual LRS form (if this was proxying their page)
+            // 2. Or make an API call to your proxy that submits to LRS
+            
+            // For now, we simulate and notify parent
+            setTimeout(() => {
+                window.parent.postMessage({
+                    type: 'PAGE_SENT',
+                    pagerNumber: pagerNum,
+                    registration: reg,
+                    timestamp: new Date().toISOString()
+                }, '*');
+                
+                // Clear after 2 seconds
+                setTimeout(() => {
+                    document.getElementById('pagerNumber').value = '';
+                    document.getElementById('registration').value = '';
+                    const status = document.getElementById('statusMessage');
+                    status.className = 'status-message';
+                }, 2000);
+            }, 500);
+        }
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('statusMessage');
+            status.textContent = message;
+            status.className = `status-message ${type}`;
+        }
+        
+        // Allow Enter key to send page
+        document.getElementById('pagerNumber').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendPage();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+select *
+from public.vehicles
+order by check_in_time desc;
+
+
+select *
+from public.vehicles
+where status = 'waiting'
+order by check_in_time asc;
+
+update public.vehicles
+set status = 'waiting'
+where id = 'df7e23a0-c44e-417f-9a20-44ab60af127d';
+
+
+
+select *
+from public.vehicles
+order by check_in_time desc;
+
+
+update public.vehicles
+set registration = replace(upper(registration), ' ', '');
+
+update public.vehicles
+set status = 'waiting'
+where id = 'df7e23a0-c44e-417f-9a20-44ab60af127d';
+
+create type vehicle_status as enum (
+  'waiting',
+  'notified',
+  'delayed',
+  'released'
+);
+
+
+alter table public.vehicles
+  alter column status type vehicle_status
+  using status::vehicle_status;
+
+
+alter table public.vehicles
+  alter column status drop default;
+
+alter table public.vehicles
+  alter column status type vehicle_status
+  using status::vehicle_status;
+
+alter table public.vehicles
+  alter column status set default 'waiting';
+
+
+update public.vehicles
+set status = 'waiting'
+where status is null;
+
+
+select *
+from public.operators
+order by created_at desc;
+
+select 
+    v.registration,
+    v.po_ref,
+    v.pager_number,
+    v.release_time,
+    o.name as completed_by
+from public.vehicles v
+left join public.operators o
+    on v.operator_id = o.id
+where v.status = 'released'
+order by v.release_time desc;
+
+select 
+    v.registration,
+    v.po_ref,
+    v.pager_number,
+    a.timestamp as release_time,
+    o.name as released_by
+from public.actions_log a
+join public.vehicles v on a.vehicle_id = v.id
+left join public.operators o on a.operator_id = o.id
+where a.action = 'release'
+order by a.timestamp desc;
+
+
+select *
+from public.actions_log
+order by timestamp desc;
+
+select 
+    a.timestamp,
+    v.registration,
+    v.po_ref,
+    a.action,
+    o.name as operator_name
+from public.actions_log a
+left join public.vehicles v 
+    on a.vehicle_id = v.id
+left join public.operators o
+    on a.operator_id = o.id
+order by a.timestamp desc;
+
+select po_ref
+from public.vehicles
+order by po_ref;
+
+select id, registration, status, check_in_time
+from public.vehicles
+order by check_in_time desc;
+
+
+update public.vehicles
+set status = 'waiting'
+where status != 'released';
+
+
+select id, registration, status, due_time, check_in_time
+from public.vehicles
+order by check_in_time desc;
+
+
+alter table public.vehicles 
+add column quoted_minutes int default 60;
+
+alter table public.vehicles 
+add column due_time timestamp with time zone;
+
+select id, registration, check_in_time, due_time
+from public.vehicles
+order by check_in_time desc;
+
+
+update public.vehicles
+set due_time = check_in_time + interval '60 minutes'
+where due_time is null;

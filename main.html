@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LRS Main Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+        
+        h1 {
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+        
+        .lorry-queue {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .lorry-item {
+            background: #333;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #666;
+        }
+        
+        .lorry-item.ready {
+            border-left-color: #4CAF50;
+        }
+        
+        .lorry-info {
+            flex: 1;
+        }
+        
+        .lorry-reg {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .lorry-details {
+            font-size: 14px;
+            color: #999;
+        }
+        
+        .page-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .page-btn:hover {
+            background: #45a049;
+        }
+        
+        .page-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        /* PIP Container */
+        .pip-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            height: 200px;
+            background: #2a2a2a;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            overflow: hidden;
+            z-index: 1000;
+        }
+        
+        .pip-header {
+            background: #4CAF50;
+            padding: 8px 12px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .pip-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+        }
+        
+        .pip-content {
+            width: 100%;
+            height: calc(100% - 40px);
+            border: none;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        
+        .status.waiting {
+            background: #ff9800;
+        }
+        
+        .status.ready {
+            background: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚛 LRS Gatehouse Dashboard</h1>
+    
+    <div class="lorry-queue">
+        <h2 style="margin-bottom: 15px;">Lorry Queue</h2>
+        
+        <div class="lorry-item ready">
+            <div class="lorry-info">
+                <div class="lorry-reg">AB12 CDE</div>
+                <div class="lorry-details">PO: 45678 | Pager: 12 | Bay: 3</div>
+            </div>
+            <button class="page-btn" onclick="pageLorry('12', 'AB12 CDE')">
+                📟 Page Driver
+            </button>
+        </div>
+        
+        <div class="lorry-item">
+            <div class="lorry-info">
+                <div class="lorry-reg">XY34 FGH</div>
+                <div class="lorry-details">PO: 45679 | Pager: 7 | Waiting</div>
+            </div>
+            <button class="page-btn" onclick="pageLorry('7', 'XY34 FGH')">
+                📟 Page Driver
+            </button>
+        </div>
+        
+        <div class="lorry-item">
+            <div class="lorry-info">
+                <div class="lorry-reg">MN56 JKL</div>
+                <div class="lorry-details">PO: 45680 | Pager: 23 | Waiting</div>
+            </div>
+            <button class="page-btn" onclick="pageLorry('23', 'MN56 JKL')">
+                📟 Page Driver
+            </button>
+        </div>
+    </div>
+
+    <!-- PIP Window -->
+    <div class="pip-container" id="pipWindow">
+        <div class="pip-header">
+            📟 LRS Pager Control
+            <button class="pip-close" onclick="togglePIP()">×</button>
+        </div>
+        <iframe 
+            id="pagerFrame"
+            class="pip-content" 
+            src="pip.html"
+        ></iframe>
+    </div>
+
+    <script>
+        function pageLorry(pagerNumber, registration) {
+            // Send message to the PIP iframe
+            const frame = document.getElementById('pagerFrame');
+            frame.contentWindow.postMessage({
+                type: 'PAGE_DRIVER',
+                pagerNumber: pagerNumber,
+                registration: registration
+            }, '*');
+            
+            // Show PIP if hidden
+            document.getElementById('pipWindow').style.display = 'block';
+            
+            // Log to console (in real app, this would go to Supabase)
+            console.log(`Paging driver - Reg: ${registration}, Pager: ${pagerNumber}`);
+        }
+        
+        function togglePIP() {
+            const pip = document.getElementById('pipWindow');
+            pip.style.display = pip.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // Listen for messages from iframe
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'PAGE_SENT') {
+                console.log('Page sent successfully:', event.data);
+                // Here you'd update your Supabase logs
+            }
+        });
+    </script>
+</body>
+</html>
