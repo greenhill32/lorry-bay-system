@@ -57,30 +57,27 @@
 
 <body>
 
-<h1>SCANner THIS QR</h1>
+<h1>SCAN THIS QR</h1>
 <h2>To view your bay time & updates</h2>
 
 <div id="qrBox"></div>
-
-<div id="status">Waiting for next check-in…</div>
+<div id="status">Waiting for latest check-in…</div>
 
 <script>
-/* -------------------------------------------------------------
-   SUPABASE CONNECTION (PROD)
-------------------------------------------------------------- */
+/* ------------------------------------------------------------------
+   SUPABASE
+------------------------------------------------------------------ */
 const db = supabase.createClient(
   "https://splcucorowqjxeeseolq.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwbGN1Y29yb3dxanhlZXNlb2xxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTExMjUsImV4cCI6MjA3ODYyNzEyNX0.R-Fm04UtBOr9OBWHnS1fhk6SnfSm7f3ZrFrQdzO1Q4Y"
 );
 
-/* -------------------------------------------------------------
-   ALWAYS USE PRODUCTION DOMAIN
-------------------------------------------------------------- */
+/* Your production domain */
 const PROD_BASE = "https://lorry-bay-system.vercel.app";
 
-/* -------------------------------------------------------------
-   RENDER QR + SHOW URL BELOW
-------------------------------------------------------------- */
+/* ------------------------------------------------------------------
+   Render QR
+------------------------------------------------------------------ */
 function showQR(vehicleId) {
     const finalUrl = `${PROD_BASE}/driver.html?uid=${vehicleId}`;
 
@@ -93,25 +90,32 @@ function showQR(vehicleId) {
         height: 240
     });
 
-    // Show URL under QR (as you wanted restored)
     document.getElementById("status").innerText = finalUrl;
 }
 
-/* -------------------------------------------------------------
-   REALTIME WATCH — NEW VEHICLE ARRIVALS
-------------------------------------------------------------- */
-db.channel("vehicleInserts")
-  .on("postgres_changes", {
-      event: "INSERT",
-      schema: "public",
-      table: "vehicles"
-  }, payload => {
-      const id = payload.new.id;
-      showQR(id);
-  })
-  .subscribe();
+/* ------------------------------------------------------------------
+   Poll newest vehicle (fallback instead of realtime)
+------------------------------------------------------------------ */
+async function checkLatest() {
+    const { data, error } = await db
+        .from("vehicles")
+        .select("id")
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+    if (error) return;
+
+    if (data && data.length > 0) {
+        showQR(data[0].id);
+    } else {
+        document.getElementById("status").innerText = "No vehicles yet…";
+    }
+}
+
+/* Run immediately & poll every 3 secs */
+checkLatest();
+setInterval(checkLatest, 3000);
 </script>
 
 </body>
 </html>
-
