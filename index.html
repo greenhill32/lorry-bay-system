@@ -454,7 +454,7 @@ const db = supabase.createClient(supabaseUrl, supabaseKey);
 <!-- END C2 -->
 
 
-// START CHUNK C3 — Add Vehicle (Dashboard Auto-QR)
+<!-- START C3 -->
 <script>
 let submitting = false;
 
@@ -506,11 +506,7 @@ async function submitVehicle() {
     }).select();
 
     if (error) {
-        if (error.message && error.message.includes("unique_active_registration")) {
-            alert(`Vehicle ${reg} is already booked in.`);
-        } else {
-            alert("Error: " + error.message);
-        }
+        alert("Error: " + error.message);
         submitting=false;
         btn.style.pointerEvents="auto";
         btn.style.opacity="1";
@@ -529,14 +525,14 @@ async function submitVehicle() {
     window.location.href = `qr-screen.html?uid=${data[0].id}`;
 }
 </script>
-// END CHUNK C3 — Add Vehicle (Dashboard Auto-QR)
+<!-- END C3 -->
 
 
 
 <!-- START C4 -->
 <script>
 async function loadQueue() {
-    // These are the statuses that should appear in the active queue
+    // These statuses SHOULD appear in the active queue
     const activeStatuses = ["waiting", "notified", "delayed", "stopped"];
 
     const { data } = await db
@@ -549,7 +545,6 @@ async function loadQueue() {
 }
 </script>
 <!-- END C4 -->
-
 
 
 <!--// START CHUNK C5 — Render Queue -->
