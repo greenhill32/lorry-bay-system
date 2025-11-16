@@ -454,7 +454,7 @@ const db = supabase.createClient(supabaseUrl, supabaseKey);
 <!-- END C2 -->
 
 
-<!-- START C3 -->
+// START CHUNK C3 — Add Vehicle (Dashboard Auto-QR)
 <script>
 let submitting = false;
 
@@ -476,6 +476,7 @@ async function submitVehicle() {
     let notes = document.getElementById("notesInput").value.trim();
     let quoted = parseInt(document.getElementById("quotedInput").value);
 
+    // normalise
     reg = reg.replace(/\s+/g, "").toUpperCase();
     if (!reg) {
         alert("Registration required");
@@ -491,6 +492,7 @@ async function submitVehicle() {
     const now = new Date().toISOString();
     const due = new Date(Date.now() + quoted * 60000).toISOString();
 
+    // INSERT
     const { data, error } = await db.from("vehicles").insert({
         registration: reg,
         po_ref: po,
@@ -504,13 +506,18 @@ async function submitVehicle() {
     }).select();
 
     if (error) {
-        alert("Error: " + error.message);
+        if (error.message && error.message.includes("unique_active_registration")) {
+            alert(`Vehicle ${reg} is already booked in.`);
+        } else {
+            alert("Error: " + error.message);
+        }
         submitting=false;
         btn.style.pointerEvents="auto";
         btn.style.opacity="1";
         return;
     }
 
+    // LOG EVENT
     await db.from("actions_log").insert({
         vehicle_id: data[0].id,
         operator_id: opId,
@@ -518,29 +525,22 @@ async function submitVehicle() {
         details: {}
     });
 
+    // ⭐ AUTO-OPEN THE QR PAGE
     window.location.href = `qr-screen.html?uid=${data[0].id}`;
 }
 </script>
-<!-- END C3 -->
-
+// END CHUNK C3 — Add Vehicle (Dashboard Auto-QR)
 
 
 
 <!-- START C4 -->
 <script>
 async function loadQueue() {
-    const activeStatuses = ["waiting", "notified", "delayed", "stopped"];
-
-    const { data, error } = await db
+    const { data } = await db
         .from("vehicles")
         .select("id, registration, po_ref, pager_number, notes, check_in_time, due_time, quoted_minutes, status")
-        .in("status", activeStatuses)
+        .in("status", ["waiting", "notified"])
         .order("check_in_time", { ascending: true });
-
-    if (error) {
-        console.error("loadQueue error:", error);
-        return;
-    }
 
     renderQueue(data);
 }
@@ -548,7 +548,7 @@ async function loadQueue() {
 <!-- END C4 -->
 
 
-<!-- START C5 — Render Queue -->
+<!--// START CHUNK C5 — Render Queue -->
 <script>
 function renderQueue(list) {
     const container = document.querySelector(".queue-container");
@@ -584,6 +584,7 @@ function renderQueue(list) {
         container.innerHTML += `
             <div class="entry ${colour} ${pulseClass}">
                 
+                <!-- CLICKABLE HEADER -->
                 <div class="entry-top"
                      onclick="openModalEditor('${v.id}')"
                      style="cursor:pointer;">
@@ -614,6 +615,7 @@ function renderQueue(list) {
 
                 </div>
 
+                <!-- BUTTONS (not part of the clickable area) -->
                 <div class="entry-actions">
                     <button class="action-btn notify-btn" onclick="notifyVehicle('${v.id}')">Notify</button>
                     <button class="action-btn complete-btn" onclick="completeVehicle('${v.id}')">Complete</button>
@@ -625,7 +627,7 @@ function renderQueue(list) {
     });
 }
 </script>
-<!-- END C5 — Render Queue -->
+<!--// END CHUNK C5 — Render Queue -->
 
 
 
@@ -893,7 +895,7 @@ async function searchVehicles() {
 <!-- END D3 -->
 
 
-<!-- START D4 -->
+// START CHUNK D4 — Modal Editor + Dynamic Status Options
 <script>
 async function openModalEditor(id) {
     const { data: v } = await db
@@ -914,11 +916,8 @@ async function openModalEditor(id) {
             border-radius:6px; 
             background:#1c1c1c; 
             color:#fff;
-            border:1px solid #444; width:180px;">
-            <option value="waiting"  ${v.status==="waiting"?"selected":""}>waiting</option>
-            <option value="notified" ${v.status==="notified"?"selected":""}>notified</option>
-            <option value="released" ${v.status==="released"?"selected":""}>released</option>
-        </select>
+            border:1px solid #444; width:180px;"
+        ></select>
 
         <label style="color:#bbb;">PO / Reference:</label>
         <input id="edit-po-${id}" value="${v.po_ref || ""}" style="
@@ -954,13 +953,36 @@ async function openModalEditor(id) {
     `;
 
     overlay.style.display = "block";
+
+    // Load statuses dynamically from DB
+    loadStatusOptions(`edit-status-${id}`, v.status);
 }
 
 function closeModal() {
     document.getElementById("editModalOverlay").style.display = "none";
 }
+
+// Fetch statuses from DB and populate dropdown
+async function loadStatusOptions(selectId, current) {
+    const { data: statuses } = await db
+        .from("statuses")
+        .select("name")
+        .order("name");
+
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = "";
+
+    statuses.forEach(s => {
+        sel.innerHTML += `
+            <option value="${s.name}" ${s.name === current ? "selected" : ""}>
+                ${s.name}
+            </option>
+        `;
+    });
+}
 </script>
-<!-- END D4 -->
+// END CHUNK D4 — Modal Editor + Dynamic Status Options
+
 
 
 <!-- START D5 -->
