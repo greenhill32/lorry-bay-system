@@ -10,23 +10,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
-    :root {
-        --bg: #0d0d0d;
-        --card: #1c1c1c;
-        --text: #e6e6e6;
-        --muted: #a0a0a0;
-        --accent: #1b8cff;
-        --amber: #ffb300;
-        --green: #46d369;
-        --red: #ff5252;
-        --deepred: #d32f2f;
-    }
-
     body {
         margin: 0;
         padding: 0;
-        background: var(--bg);
-        color: var(--text);
+        background: #111;
+        color: white;
         font-family: Arial, sans-serif;
         display: flex;
         align-items: center;
@@ -37,55 +25,48 @@
     }
 
     h1 {
-        font-size: 3.4rem;
-        margin-bottom: 5px;
-        color: var(--accent);
-        letter-spacing: 1px;
+        font-size: 3rem;
+        margin-bottom: 10px;
     }
 
     h2 {
         margin-top: 0;
         opacity: 0.8;
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         margin-bottom: 30px;
-        color: var(--text);
     }
 
     #qrBox {
         padding: 20px;
-        background: var(--card);
-        border-radius: 16px;
+        background: white;
+        border-radius: 15px;
         width: 260px;
         height: 260px;
         display: flex;
         align-items: center;
         justify-content: center;
         margin-bottom: 25px;
-        border: 1px solid #303030;
     }
 
     #urlText {
         font-size: 1rem;
-        opacity: 0.6;
+        opacity: 0.7;
         word-break: break-all;
-        margin-bottom: 20px;
-        color: var(--muted);
+        margin-bottom: 10px;
     }
 
     #status {
-        margin-top: 10px;
-        font-size: 1.6rem;
-        opacity: 0.9;
-        font-weight: bold;
-        color: var(--accent);
+        margin-top: 20px;
+        font-size: 1.2rem;
+        opacity: 0.6;
     }
 </style>
 </head>
 
 <body>
 
-<h1 id="titleText">SCAN THIS QR</h1>
-<h2 id="subtitleText">To view your bay time & updates</h2>
+<h1>SCAN THIS QR</h1>
+<h2>To view your bay time & updates</h2>
 
 <div id="qrBox"></div>
 <div id="urlText"></div>
@@ -106,12 +87,42 @@ const db = supabase.createClient(
    LANGUAGE PACKS
    ============================================================= */
 const m = {
-    en: { title:"SCAN THIS QR", subtitle:"To view your bay time & updates", ready:"Ready — driver can scan now", waiting:"Waiting for next check-in…" },
-    ro: { title:"SCANEAZĂ CODUL QR", subtitle:"Pentru a vedea timpul și actualizările", ready:"Gata — șoferul poate scana", waiting:"În așteptare pentru următoarea înregistrare…" },
-    pl: { title:"ZESKANUJ TEN KOD QR", subtitle:"Aby zobaczyć czas i aktualizacje", ready:"Gotowe — kierowca może skanować", waiting:"Oczekiwanie na kolejne zgłoszenie…" },
-    lt: { title:"NUSKAITYKITE QR KODĄ", subtitle:"Norėdami pamatyti laiką ir naujienas", ready:"Paruošta — vairuotojas gali nuskaityti", waiting:"Laukiama kito įregistravimo…" },
-    bg: { title:"СКАНИРАЙ ТОЗИ QR", subtitle:"За да видите времето и актуализациите", ready:"Готово — шофьорът може да сканира", waiting:"Изчакване на следващото вписване…" },
-    hu: { title:"SZKENNELD BE A QR KÓDOT", subtitle:"A várakozási idő és frissítések megtekintéséhez", ready:"Kész — a sofőr be tudja szkennelni", waiting:"Várakozás a következő bejelentkezésre…" }
+    en: {
+        title: "SCAN THIS QR",
+        subtitle: "To view your bay time & updates",
+        ready: "Ready — driver can scan now",
+        waiting: "Waiting for next check-in…"
+    },
+    ro: {
+        title: "SCANEAZĂ CODUL QR",
+        subtitle: "Pentru a vedea timpul și actualizările",
+        ready: "Gata — șoferul poate scana",
+        waiting: "În așteptare pentru următoarea înregistrare…"
+    },
+    pl: {
+        title: "ZESKANUJ TEN KOD QR",
+        subtitle: "Aby zobaczyć czas i aktualizacje",
+        ready: "Gotowe — kierowca może skanować",
+        waiting: "Oczekiwanie na kolejne zgłoszenie…"
+    },
+    lt: {
+        title: "NUSKAITYKITE QR KODĄ",
+        subtitle: "Norėdami pamatyti laiką ir naujienas",
+        ready: "Paruošta — vairuotojas gali nuskaityti",
+        waiting: "Laukiama kito įregistravimo…"
+    },
+    bg: {
+        title: "СКАНИРАЙ ТОЗИ QR",
+        subtitle: "За да видите времето и актуализациите",
+        ready: "Готово — шофьорът може да сканира",
+        waiting: "Изчакване на следващото вписване…"
+    },
+    hu: {
+        title: "SZKENNELD BE A QR KÓDOT",
+        subtitle: "A várakozási idő és frissítések megtekintéséhez",
+        ready: "Kész — a sofőr be tudja szkennelni",
+        waiting: "Várakozás a következő bejelentkezésre…"
+    }
 };
 
 
@@ -121,8 +132,8 @@ const m = {
 let lang = navigator.language?.substring(0,2) || "en";
 if (!m[lang]) lang = "en";
 
-document.getElementById("titleText").innerText = m[lang].title;
-document.getElementById("subtitleText").innerText = m[lang].subtitle;
+document.querySelector("h1").innerText = m[lang].title;
+document.querySelector("h2").innerText = m[lang].subtitle;
 document.getElementById("status").innerText = m[lang].waiting;
 
 
@@ -131,29 +142,25 @@ document.getElementById("status").innerText = m[lang].waiting;
    ============================================================= */
 function showQR(vehicleId) {
 
-    // PRODUCTION URL NOTES:
-    // Replace with your real host when deploying
-    const url = `${location.origin}/driver.html?uid=${vehicleId}`;
+    const url = `http://127.0.0.1:5500/driver.html?uid=${vehicleId}`;
 
     document.getElementById("qrBox").innerHTML = "";
 
     new QRCode(document.getElementById("qrBox"), {
         text: url,
         width: 240,
-        height: 240,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
+        height: 240
     });
 
     document.getElementById("urlText").innerText = url;
 
-    document.getElementById("status").style.color = "var(--green)";
     document.getElementById("status").innerText = m[lang].ready;
 }
 
 
 /* =============================================================
-   REALTIME LISTENER – fires on new check-in
+   REALTIME LISTENER
+   Fires instantly when a new lorry is checked in
    ============================================================= */
 db.channel("vehicleInserts")
   .on("postgres_changes", {
@@ -163,8 +170,6 @@ db.channel("vehicleInserts")
   }, payload => {
 
       const id = payload.new.id;
-
-      document.getElementById("status").style.color = "var(--accent)";
       document.getElementById("status").innerText = m[lang].waiting;
 
       showQR(id);
