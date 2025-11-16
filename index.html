@@ -757,7 +757,7 @@ async function undoVehicle(id) {
 
 <!-- START SECTION D -->
 
-<!-- START D1 -->
+<!-- START D1 — Load Activity -->
 <script>
 async function loadActivity() {
     const { data } = await db
@@ -769,7 +769,7 @@ async function loadActivity() {
             vehicles (registration, po_ref)
         `)
         .order("timestamp", { ascending: false })
-        .limit(20);
+        .limit(10);   // HARD LIMIT TO 10 ONLY
 
     const panel = document.querySelector(".activity-panel");
     panel.innerHTML = `<h3 style="color:#fff;">Recent Activity</h3><hr style="border-color:#444;">`;
@@ -797,7 +797,8 @@ async function loadActivity() {
     });
 }
 </script>
-<!-- END D1 -->
+<!-- END D1 — Load Activity -->
+
 
 
 
@@ -1047,4 +1048,5 @@ window.onload = function() {
 </body>
 </html>
 <!-- END END-OF-FILE -->
+
 
