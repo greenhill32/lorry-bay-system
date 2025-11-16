@@ -454,7 +454,7 @@ const db = supabase.createClient(supabaseUrl, supabaseKey);
 <!-- END C2 -->
 
 
-// START CHUNK C3 — Add Vehicle (Dashboard Auto-QR)
+<!-- START C3 -->
 <script>
 let submitting = false;
 
@@ -476,7 +476,6 @@ async function submitVehicle() {
     let notes = document.getElementById("notesInput").value.trim();
     let quoted = parseInt(document.getElementById("quotedInput").value);
 
-    // normalise
     reg = reg.replace(/\s+/g, "").toUpperCase();
     if (!reg) {
         alert("Registration required");
@@ -492,7 +491,6 @@ async function submitVehicle() {
     const now = new Date().toISOString();
     const due = new Date(Date.now() + quoted * 60000).toISOString();
 
-    // INSERT
     const { data, error } = await db.from("vehicles").insert({
         registration: reg,
         po_ref: po,
@@ -506,7 +504,7 @@ async function submitVehicle() {
     }).select();
 
     if (error) {
-        if (error.message && error.message.includes("unique_active_registration")) {
+        if (error.message.includes("unique_active_registration")) {
             alert(`Vehicle ${reg} is already booked in.`);
         } else {
             alert("Error: " + error.message);
@@ -517,7 +515,6 @@ async function submitVehicle() {
         return;
     }
 
-    // LOG EVENT
     await db.from("actions_log").insert({
         vehicle_id: data[0].id,
         operator_id: opId,
@@ -525,30 +522,35 @@ async function submitVehicle() {
         details: {}
     });
 
-    // ⭐ AUTO-OPEN THE QR PAGE
     window.location.href = `qr-screen.html?uid=${data[0].id}`;
 }
 </script>
-// END CHUNK C3 — Add Vehicle (Dashboard Auto-QR)
+<!-- END C3 -->
 
 
 
 <!-- START C4 -->
 <script>
 async function loadQueue() {
-    const { data } = await db
+    const activeStatuses = ["waiting", "notified", "delayed", "stopped"];
+
+    const { data, error } = await db
         .from("vehicles")
         .select("id, registration, po_ref, pager_number, notes, check_in_time, due_time, quoted_minutes, status")
-        .in("status", ["waiting", "notified"])
+        .in("status", activeStatuses)
         .order("check_in_time", { ascending: true });
+
+    if (error) {
+        console.error("loadQueue error:", error);
+        return;
+    }
 
     renderQueue(data);
 }
 </script>
 <!-- END C4 -->
 
-
-<!--// START CHUNK C5 — Render Queue -->
+<!-- START C5 -->
 <script>
 function renderQueue(list) {
     const container = document.querySelector(".queue-container");
@@ -584,7 +586,6 @@ function renderQueue(list) {
         container.innerHTML += `
             <div class="entry ${colour} ${pulseClass}">
                 
-                <!-- CLICKABLE HEADER -->
                 <div class="entry-top"
                      onclick="openModalEditor('${v.id}')"
                      style="cursor:pointer;">
@@ -615,7 +616,6 @@ function renderQueue(list) {
 
                 </div>
 
-                <!-- BUTTONS (not part of the clickable area) -->
                 <div class="entry-actions">
                     <button class="action-btn notify-btn" onclick="notifyVehicle('${v.id}')">Notify</button>
                     <button class="action-btn complete-btn" onclick="completeVehicle('${v.id}')">Complete</button>
@@ -627,7 +627,7 @@ function renderQueue(list) {
     });
 }
 </script>
-<!--// END CHUNK C5 — Render Queue -->
+<!-- END C5 -->
 
 
 
