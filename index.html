@@ -476,7 +476,6 @@ async function submitVehicle() {
     let notes = document.getElementById("notesInput").value.trim();
     let quoted = parseInt(document.getElementById("quotedInput").value);
 
-    // normalise
     reg = reg.replace(/\s+/g, "").toUpperCase();
     if (!reg) {
         alert("Registration required");
@@ -492,7 +491,6 @@ async function submitVehicle() {
     const now = new Date().toISOString();
     const due = new Date(Date.now() + quoted * 60000).toISOString();
 
-    // INSERT
     const { data, error } = await db.from("vehicles").insert({
         registration: reg,
         po_ref: po,
@@ -513,7 +511,6 @@ async function submitVehicle() {
         return;
     }
 
-    // LOG EVENT
     await db.from("actions_log").insert({
         vehicle_id: data[0].id,
         operator_id: opId,
@@ -521,7 +518,6 @@ async function submitVehicle() {
         details: {}
     });
 
-    // ⭐ AUTO-OPEN THE QR PAGE
     window.location.href = `qr-screen.html?uid=${data[0].id}`;
 }
 </script>
@@ -529,22 +525,28 @@ async function submitVehicle() {
 
 
 
+
 <!-- START C4 -->
 <script>
 async function loadQueue() {
-    // These statuses SHOULD appear in the active queue
     const activeStatuses = ["waiting", "notified", "delayed", "stopped"];
 
-    const { data } = await db
+    const { data, error } = await db
         .from("vehicles")
         .select("id, registration, po_ref, pager_number, notes, check_in_time, due_time, quoted_minutes, status")
         .in("status", activeStatuses)
         .order("check_in_time", { ascending: true });
 
+    if (error) {
+        console.error("loadQueue error:", error);
+        return;
+    }
+
     renderQueue(data);
 }
 </script>
 <!-- END C4 -->
+
 
 
 <!--// START CHUNK C5 — Render Queue -->
