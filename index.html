@@ -536,16 +536,20 @@ async function submitVehicle() {
 <!-- START C4 -->
 <script>
 async function loadQueue() {
+    // These are the statuses that should appear in the active queue
+    const activeStatuses = ["waiting", "notified", "delayed", "stopped"];
+
     const { data } = await db
         .from("vehicles")
         .select("id, registration, po_ref, pager_number, notes, check_in_time, due_time, quoted_minutes, status")
-        .in("status", ["waiting", "notified"])
+        .in("status", activeStatuses)
         .order("check_in_time", { ascending: true });
 
     renderQueue(data);
 }
 </script>
 <!-- END C4 -->
+
 
 
 <!--// START CHUNK C5 — Render Queue -->
