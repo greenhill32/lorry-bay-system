@@ -548,8 +548,7 @@ async function loadQueue() {
 <!-- END C4 -->
 
 
-
-<!--// START CHUNK C5 — Render Queue -->
+<!-- START C5 — Render Queue -->
 <script>
 function renderQueue(list) {
     const container = document.querySelector(".queue-container");
@@ -585,7 +584,6 @@ function renderQueue(list) {
         container.innerHTML += `
             <div class="entry ${colour} ${pulseClass}">
                 
-                <!-- CLICKABLE HEADER -->
                 <div class="entry-top"
                      onclick="openModalEditor('${v.id}')"
                      style="cursor:pointer;">
@@ -616,7 +614,6 @@ function renderQueue(list) {
 
                 </div>
 
-                <!-- BUTTONS (not part of the clickable area) -->
                 <div class="entry-actions">
                     <button class="action-btn notify-btn" onclick="notifyVehicle('${v.id}')">Notify</button>
                     <button class="action-btn complete-btn" onclick="completeVehicle('${v.id}')">Complete</button>
@@ -628,7 +625,7 @@ function renderQueue(list) {
     });
 }
 </script>
-<!--// END CHUNK C5 — Render Queue -->
+<!-- END C5 — Render Queue -->
 
 
 
