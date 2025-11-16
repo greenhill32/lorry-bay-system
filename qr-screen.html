@@ -5,111 +5,172 @@
 <title>Driver Scan Screen</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Supabase -->
+<!-- Supabase + QR libraries -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- QR generator -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
+    :root {
+        --bg: #0d0d0d;
+        --card: #1c1c1c;
+        --text: #e6e6e6;
+        --muted: #a0a0a0;
+        --accent: #1b8cff;
+        --amber: #ffb300;
+        --green: #46d369;
+        --red: #ff5252;
+        --deepred: #d32f2f;
+    }
+
     body {
-        margin:0;
-        padding:0;
-        background:#0d0d0d;
-        color:white;
-        font-family:Arial, sans-serif;
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        text-align:center;
-        height:100vh;
-        padding-top:40px;
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Arial, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        flex-direction: column;
+        text-align: center;
     }
+
     h1 {
-        font-size:3rem;
-        margin:0;
-        font-weight:800;
+        font-size: 3.4rem;
+        margin-bottom: 5px;
+        color: var(--accent);
+        letter-spacing: 1px;
     }
+
     h2 {
-        font-size:1.3rem;
-        margin:10px 0 35px;
-        opacity:0.7;
+        margin-top: 0;
+        opacity: 0.8;
+        font-size: 1.5rem;
+        margin-bottom: 30px;
+        color: var(--text);
     }
+
     #qrBox {
-        background:white;
-        width:260px;
-        height:260px;
-        border-radius:20px;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        box-shadow:0 0 25px rgba(0,0,0,0.5);
+        padding: 20px;
+        background: var(--card);
+        border-radius: 16px;
+        width: 260px;
+        height: 260px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 25px;
+        border: 1px solid #303030;
     }
+
+    #urlText {
+        font-size: 1rem;
+        opacity: 0.6;
+        word-break: break-all;
+        margin-bottom: 20px;
+        color: var(--muted);
+    }
+
     #status {
-        margin-top:25px;
-        font-size:1.05rem;
-        opacity:0.85;
-        word-break:break-all;
-        padding:0 20px;
-        max-width:95%;
+        margin-top: 10px;
+        font-size: 1.6rem;
+        opacity: 0.9;
+        font-weight: bold;
+        color: var(--accent);
     }
 </style>
 </head>
 
 <body>
 
-<h1>SCAN THIS QR</h1>
-<h2>To view your bay time & updates</h2>
+<h1 id="titleText">SCAN THIS QR</h1>
+<h2 id="subtitleText">To view your bay time & updates</h2>
 
 <div id="qrBox"></div>
+<div id="urlText"></div>
 
 <div id="status">Waiting for next check-in…</div>
 
 <script>
-/* -------------------------------------------------------------
-   SUPABASE CONNECTION (PROD)
-------------------------------------------------------------- */
+/* =============================================================
+   SUPABASE SETUP
+   ============================================================= */
 const db = supabase.createClient(
   "https://splcucorowqjxeeseolq.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwbGN1Y29yb3dxanhlZXNlb2xxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTExMjUsImV4cCI6MjA3ODYyNzEyNX0.R-Fm04UtBOr9OBWHnS1fhk6SnfSm7f3ZrFrQdzO1Q4Y"
 );
 
-/* -------------------------------------------------------------
-   ALWAYS USE PRODUCTION DOMAIN
-------------------------------------------------------------- */
-const PROD_BASE = "https://lorry-bay-system.vercel.app";
 
-/* -------------------------------------------------------------
-   RENDER QR + SHOW URL BELOW
-------------------------------------------------------------- */
+/* =============================================================
+   LANGUAGE PACKS
+   ============================================================= */
+const m = {
+    en: { title:"SCAN THIS QR", subtitle:"To view your bay time & updates", ready:"Ready — driver can scan now", waiting:"Waiting for next check-in…" },
+    ro: { title:"SCANEAZĂ CODUL QR", subtitle:"Pentru a vedea timpul și actualizările", ready:"Gata — șoferul poate scana", waiting:"În așteptare pentru următoarea înregistrare…" },
+    pl: { title:"ZESKANUJ TEN KOD QR", subtitle:"Aby zobaczyć czas i aktualizacje", ready:"Gotowe — kierowca może skanować", waiting:"Oczekiwanie na kolejne zgłoszenie…" },
+    lt: { title:"NUSKAITYKITE QR KODĄ", subtitle:"Norėdami pamatyti laiką ir naujienas", ready:"Paruošta — vairuotojas gali nuskaityti", waiting:"Laukiama kito įregistravimo…" },
+    bg: { title:"СКАНИРАЙ ТОЗИ QR", subtitle:"За да видите времето и актуализациите", ready:"Готово — шофьорът може да сканира", waiting:"Изчакване на следващото вписване…" },
+    hu: { title:"SZKENNELD BE A QR KÓDOT", subtitle:"A várakozási idő és frissítések megtekintéséhez", ready:"Kész — a sofőr be tudja szkennelni", waiting:"Várakozás a következő bejelentkezésre…" }
+};
+
+
+/* =============================================================
+   LANGUAGE DETECTION
+   ============================================================= */
+let lang = navigator.language?.substring(0,2) || "en";
+if (!m[lang]) lang = "en";
+
+document.getElementById("titleText").innerText = m[lang].title;
+document.getElementById("subtitleText").innerText = m[lang].subtitle;
+document.getElementById("status").innerText = m[lang].waiting;
+
+
+/* =============================================================
+   QR DISPLAY FUNCTION
+   ============================================================= */
 function showQR(vehicleId) {
-    const finalUrl = `${PROD_BASE}/driver.html?uid=${vehicleId}`;
 
-    const box = document.getElementById("qrBox");
-    box.innerHTML = "";
+    // PRODUCTION URL NOTES:
+    // Replace with your real host when deploying
+    const url = `${location.origin}/driver.html?uid=${vehicleId}`;
 
-    new QRCode(box, {
-        text: finalUrl,
+    document.getElementById("qrBox").innerHTML = "";
+
+    new QRCode(document.getElementById("qrBox"), {
+        text: url,
         width: 240,
-        height: 240
+        height: 240,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
     });
 
-    // Show URL under QR (as you wanted restored)
-    document.getElementById("status").innerText = finalUrl;
+    document.getElementById("urlText").innerText = url;
+
+    document.getElementById("status").style.color = "var(--green)";
+    document.getElementById("status").innerText = m[lang].ready;
 }
 
-/* -------------------------------------------------------------
-   REALTIME WATCH — NEW VEHICLE ARRIVALS
-------------------------------------------------------------- */
+
+/* =============================================================
+   REALTIME LISTENER – fires on new check-in
+   ============================================================= */
 db.channel("vehicleInserts")
   .on("postgres_changes", {
       event: "INSERT",
       schema: "public",
       table: "vehicles"
   }, payload => {
+
       const id = payload.new.id;
+
+      document.getElementById("status").style.color = "var(--accent)";
+      document.getElementById("status").innerText = m[lang].waiting;
+
       showQR(id);
   })
   .subscribe();
+
 </script>
 
 </body>
