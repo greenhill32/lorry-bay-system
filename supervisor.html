@@ -114,7 +114,7 @@
 </div>
 <!-- END CHUNK S1 — Header + Styles -->
 
-<!-- START CHUNK S6 — Supervisor Search + Pop-out Editor -->
+<!-- START CHUNK S6 — Supervisor Search + Dynamic Status Editor -->
 <div style="padding:20px 30px;">
     <input 
         id="superSearch"
@@ -161,21 +161,17 @@ document.getElementById("superSearch").addEventListener("input", async (e) => {
         return;
     }
 
-    // search REG
-    const { data: regHits } = await db
+    let { data: results } = await db
         .from("vehicles")
         .select("*")
         .ilike("registration", `%${q}%`);
 
-    let results = regHits;
-
-    // search PO if nothing
     if (!results.length) {
-        const { data: poHits } = await db
+        const { data: byPO } = await db
             .from("vehicles")
             .select("*")
             .ilike("po_ref", `%${q}%`);
-        results = poHits;
+        results = byPO;
     }
 
     if (!results.length) {
@@ -198,7 +194,6 @@ document.getElementById("superSearch").addEventListener("input", async (e) => {
     `).join("");
 });
 
-
 // OPEN MODAL EDITOR
 async function superEditVehicle(id) {
     const { data: v } = await db
@@ -217,11 +212,6 @@ async function superEditVehicle(id) {
         <select id="sv-status" style="
             width:100%; padding:10px; margin-bottom:12px;
             background:#222; border:1px solid #444; border-radius:6px; color:#fff;">
-            <option value="waiting"  ${v.status==="waiting"?"selected":""}>waiting</option>
-            <option value="notified" ${v.status==="notified"?"selected":""}>notified</option>
-            <option value="released" ${v.status==="released"?"selected":""}>released</option>
-            <option value="delayed"  ${v.status==="delayed"?"selected":""}>delayed</option>
-            <option value="stopped"  ${v.status==="stopped"?"selected":""}>stopped</option>
         </select>
 
         <label>PO / Reference</label>
@@ -256,10 +246,32 @@ async function superEditVehicle(id) {
     `;
 
     overlay.style.display = "block";
+
+    // Load status list dynamically
+    loadStatusOptions("sv-status", v.status);
 }
 
 function svClose() {
     document.getElementById("superEditOverlay").style.display = "none";
+}
+
+// Dynamic status loader from DB
+async function loadStatusOptions(selectId, current) {
+    const { data: statuses } = await db
+        .from("statuses")
+        .select("name")
+        .order("name");
+
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = "";
+
+    statuses.forEach(s => {
+        sel.innerHTML += `
+            <option value="${s.name}" ${current === s.name ? "selected" : ""}>
+                ${s.name}
+            </option>
+        `;
+    });
 }
 
 // SAVE EDITS
@@ -276,8 +288,8 @@ async function svSave(id) {
         po_ref: po,
         pager_number: pager,
         notes,
-        notify_time: (status==="notified"?now:null),
-        release_time: (status==="released"?now:null),
+        notify_time: (status==="notified" ? now : null),
+        release_time: (status==="released" ? now : null),
         operator_id: opId
     }).eq("id", id);
 
@@ -291,7 +303,7 @@ async function svSave(id) {
     svClose();
 }
 </script>
-<!-- END CHUNK S6 — Supervisor Search + Pop-out Editor -->
+<!-- END CHUNK S6 — Supervisor Search + Dynamic Status Editor -->
 
 
 <!-- START CHUNK S2 — KPI + Charts + Tables -->
