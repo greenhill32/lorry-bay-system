@@ -677,7 +677,7 @@ async function saveNotes(vehicleId) {
 <!-- END C6 -->
 
 
-<!-- START C7 -->
+<!-- START C7 — Complete/Notify/Undo -->
 <script>
 async function notifyVehicle(id) {
     const opId = localStorage.getItem("operator_id");
@@ -694,7 +694,7 @@ async function notifyVehicle(id) {
     await db.from("actions_log").insert({
         vehicle_id: id,
         operator_id: opId,
-        action: "notify",
+        action: "notified",
         details: {}
     });
 
@@ -718,7 +718,7 @@ async function completeVehicle(id) {
     await db.from("actions_log").insert({
         vehicle_id: id,
         operator_id: opId,
-        action: "release",
+        action: "completed",   // UPDATED
         details: {}
     });
 
@@ -750,7 +750,8 @@ async function undoVehicle(id) {
     loadActivity();
 }
 </script>
-<!-- END C7 -->
+<!-- END C7 — Complete/Notify/Undo -->
+
 
 
 <!-- END SECTION C -->
@@ -769,7 +770,7 @@ async function loadActivity() {
             vehicles (registration, po_ref)
         `)
         .order("timestamp", { ascending: false })
-        .limit(10);   // HARD LIMIT TO 10 ONLY
+        .limit(10);
 
     const panel = document.querySelector(".activity-panel");
     panel.innerHTML = `<h3 style="color:#fff;">Recent Activity</h3><hr style="border-color:#444;">`;
@@ -785,12 +786,19 @@ async function loadActivity() {
         const reg = a.vehicles?.registration || "?";
         const po = a.vehicles?.po_ref || "";
 
+        let label = a.action;
+
+        // NORMALISE UI TEXT
+        if (a.action === "completed") label = "completed";
+        if (a.action === "notified")  label = "notified";
+        if (a.action === "undo")      label = "undo";
+
         panel.innerHTML += `
             <div style="margin-bottom:12px; color:#ddd;">
                 <strong style="font-size:18px;">${reg}</strong>
                 <span style="opacity:0.6; font-size:14px;">(${po})</span><br>
                 <span style="opacity:0.7; font-size:14px;">
-                    ${a.action} by ${who} — ${t}
+                    ${label} by ${who} — ${t}
                 </span>
             </div>
         `;
@@ -1048,5 +1056,4 @@ window.onload = function() {
 </body>
 </html>
 <!-- END END-OF-FILE -->
-
 
