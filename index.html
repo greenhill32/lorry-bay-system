@@ -395,14 +395,13 @@
 <!-- END B5 -->
 
 
-<!-- START B6 -->
-<div id="editModalOverlay" style="
-    position:fixed;
-    top:0; left:0; right:0; bottom:0;
+<!-- START CHUNK B6 — Modal HTML -->
+<!-- Modal Overlay -->
+<div id="editOverlay" style="
+    position:fixed; top:0; left:0; right:0; bottom:0;
     background:rgba(0,0,0,0.6);
-    display:none;
-    z-index:9999;
-">
+    display:none; z-index:9999;">
+    
     <div id="editModal" style="
         background:#1c1c1c;
         color:#fff;
@@ -410,12 +409,10 @@
         margin:80px auto;
         padding:25px;
         border-radius:12px;
-        border:1px solid #333;
-    ">
-        <!-- Modal content injected in D4 -->
+        border:1px solid #333;">
     </div>
 </div>
-<!-- END B6 -->
+<!-- END CHUNK B6 — Modal HTML -->
 
 <!-- END SECTION B -->
 <!-- START SECTION C -->
@@ -544,117 +541,63 @@ async function loadQueue() {
 }
 </script>
 <!-- END C4 -->
-
-<!--// START CHUNK C5 — Render Queue -->
-<script>
+<!-- START CHUNK C5 — Render Queue -->
 function renderQueue(list) {
-    const container = document.querySelector(".queue-container");
+    const box = document.querySelector(".queue-list");
+    box.innerHTML = "";
 
-    container.innerHTML = `
-        <div class="queue-header">
-            <span>Active Queue</span>
-            <span class="queue-count">${list.length} vehicles active</span>
-        </div>
-    `;
-
-    if (list.length === 0) {
-        container.innerHTML += `
-            <div style="padding:30px;text-align:center;color:#777;">
-                No active vehicles
-            </div>`;
+    if (!list || list.length === 0) {
+        box.innerHTML = `<div style="color:#888; padding:20px;">No active vehicles</div>`;
         return;
     }
 
     list.forEach(v => {
-        const checkIn = new Date(v.check_in_time);
-        const due = new Date(v.due_time);
-        const now = new Date();
+        const now = Date.now();
+        const checkIn = new Date(v.check_in_time).getTime();
+        const waitMins = Math.floor((now - checkIn) / 60000);
 
-        // ---- Calculate overdue ----
-        let overdue = Math.floor((now - due) / 60000);
-        if (overdue < 0) overdue = 0;
-
-        // ---- Colour / label defaults ----
+        // overdue colour logic
         let colour = "green";
-        let rightText = "";
-        const dueText = due.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" });
+        if (waitMins >= 30) colour = "amber";
+        if (waitMins >= 60) colour = "red";
+        if (waitMins >= 180) colour = "deepred";
 
-        // ---- Special Cases (STOPPED / DELAYED) ----
-        if (v.status === "stopped") {
-            colour = "red2";
-            rightText = "<strong style='color:#ff4040;'>STOPPED</strong>";
-        }
-        else if (v.status === "delayed") {
-            colour = "amber";
-            rightText = "<strong style='color:#ffb300;'>DELAYED</strong>";
-        }
-        else if (v.status === "notified") {
-            colour = "blue";
-            rightText = "<strong style='color:#1b8cff;'>Notified</strong>";
-        }
-        else {
-            // Normal waiting logic
-            if (now >= due) colour = "amber";
-            if (overdue >= 30) colour = "red";
-            if (overdue >= 180) colour = "red2";
+        // Card HTML
+        const card = document.createElement("div");
+        card.className = `queue-card ${colour}`;
+        card.style.cursor = "pointer";
 
-            rightText = overdue > 0
-                ? `${overdue} mins overdue`
-                : "On time";
-        }
+        // Entire card opens modal editor
+        card.onclick = () => openEditVehicle(v.id);
 
-        // ---- STOPPED should NOT show overdue ----
-        if (v.status === "stopped") {
-            overdue = "";
-        }
+        card.innerHTML = `
+            <div class="row1">
+                <div class="reg">${v.registration}</div>
+                <div class="pager">Pager: ${v.pager_number || "-"}</div>
+            </div>
 
-        container.innerHTML += `
-            <div class="entry ${colour}" 
-                 style="cursor:pointer;"
-                 onclick="openModalEditor('${v.id}')">
+            <div class="row2">
+                <div class="po">PO: ${v.po_ref || "-"}</div>
+                <div class="mins">${waitMins} mins</div>
+            </div>
 
-                <div class="entry-top">
+            <div class="notes">${v.notes ? v.notes : "<span class='notes-empty'>No notes</span>"}</div>
 
-                    <div>
-                        <strong>${v.registration}</strong><br>
-                        <span>${v.po_ref || "No PO"}</span><br>
+            <div class="actions">
+                <button class="notify-btn" onclick="event.stopPropagation(); notifyVehicle('${v.id}')">
+                    Notify
+                </button>
 
-                        <span style="font-size:11px;opacity:0.7;">
-                            Due at ${dueText}
-                        </span>
-
-                        <div class="pager-badge">Pager #${v.pager_number || "-"}</div>
-
-                        <!-- Notes (do not open modal when clicked) -->
-                        <div id="notes-${v.id}"
-                             class="notes-text"
-                             onclick="event.stopPropagation(); enableNotesEdit('${v.id}', \`${v.notes || ''}\`)">
-                            ${v.notes ? v.notes : "<i>Click to add notes</i>"}
-                        </div>
-                    </div>
-
-                    <div style="text-align:right;">
-                        <div>${rightText}</div>
-                        <div style="font-size:12px;opacity:0.7;">
-                            In: ${checkIn.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- Buttons (must NOT trigger modal) -->
-                <div class="entry-actions" onclick="event.stopPropagation();">
-                    <button class="action-btn notify-btn" onclick="notifyVehicle('${v.id}')">Notify</button>
-                    <button class="action-btn complete-btn" onclick="completeVehicle('${v.id}')">Complete</button>
-                    <button class="action-btn" style="background:#777;" onclick="undoVehicle('${v.id}')">Undo</button>
-                </div>
-
+                <button class="release-btn" onclick="event.stopPropagation(); completeVehicle('${v.id}')">
+                    Complete
+                </button>
             </div>
         `;
+
+        box.appendChild(card);
     });
 }
-</script>
-<!--// END CHUNK C5 — Render Queue -->
+<!-- END CHUNK C5 — Render Queue -->
 
 
 <!-- START C6 -->
@@ -921,9 +864,8 @@ async function searchVehicles() {
 <!-- END D3 -->
 
 
-<!-- START CHUNK D4 — Modal Editor + Dynamic Status Options
-<script>
-async function openModalEditor(id) {
+<!-- START CHUNK D4 — Open Modal Editor -->
+async function openEditVehicle(id) {
     const { data: v } = await db
         .from("vehicles")
         .select("*")
@@ -931,47 +873,47 @@ async function openModalEditor(id) {
         .single();
 
     const modal = document.getElementById("editModal");
-    const overlay = document.getElementById("editModalOverlay");
+    const overlay = document.getElementById("editOverlay");
 
     modal.innerHTML = `
-        <h2 style="color:#fff;">Edit ${v.registration}</h2>
+        <h2>Edit ${v.registration}</h2>
 
-        <label style="color:#bbb;">Status:</label><br>
-        <select id="edit-status-${id}" style="
-            padding:10px; margin:6px 0 16px 0; 
-            border-radius:6px; 
-            background:#1c1c1c; 
-            color:#fff;
-            border:1px solid #444; width:180px;"
-        ></select>
+        <label>Status</label>
+        <select id="ed-status" style="
+            width:100%; padding:10px; margin-bottom:12px;
+            background:#222; border:1px solid #444; border-radius:6px; color:#fff;">
+            <option value="waiting"  ${v.status==="waiting"?"selected":""}>waiting</option>
+            <option value="notified" ${v.status==="notified"?"selected":""}>notified</option>
+            <option value="released" ${v.status==="released"?"selected":""}>released</option>
+            <option value="delayed"  ${v.status==="delayed"?"selected":""}>delayed</option>
+            <option value="stopped"  ${v.status==="stopped"?"selected":""}>stopped</option>
+        </select>
 
-        <label style="color:#bbb;">PO / Reference:</label>
-        <input id="edit-po-${id}" value="${v.po_ref || ""}" style="
-            width:100%; padding:10px; 
-            background:#1c1c1c; color:#fff;
-            border:1px solid #444; border-radius:6px; margin-bottom:16px;">
+        <label>PO / Reference</label>
+        <input id="ed-po" value="${v.po_ref || ""}" style="
+            width:100%; padding:10px; margin-bottom:12px;
+            background:#222; border:1px solid #444; border-radius:6px; color:#fff;">
 
-        <label style="color:#bbb;">Pager Number:</label>
-        <input id="edit-pager-${id}" type="number" value="${v.pager_number || ""}" style="
-            width:100%; padding:10px;
-            background:#1c1c1c; color:#fff;
-            border:1px solid #444; border-radius:6px; margin-bottom:16px;">
+        <label>Pager Number</label>
+        <input id="ed-pager" type="number" value="${v.pager_number || ""}" style="
+            width:100%; padding:10px; margin-bottom:12px;
+            background:#222; border:1px solid #444; border-radius:6px; color:#fff;">
 
-        <label style="color:#bbb;">Notes:</label>
-        <textarea id="edit-notes-${id}" style="
-            width:100%; height:90px; padding:10px;
-            background:#1c1c1c; color:#fff;
-            border:1px solid #444; border-radius:6px;">${v.notes || ""}</textarea>
+        <label>Notes</label>
+        <textarea id="ed-notes" style="
+            width:100%; height:80px; padding:10px;
+            background:#222; border:1px solid #444; border-radius:6px; color:#fff;
+        ">${v.notes || ""}</textarea>
 
-        <div style="margin-top:22px; text-align:right;">
-            <button onclick="closeModal()" style="
-                padding:10px 18px; background:#555; color:white;
+        <div style="margin-top:18px; text-align:right;">
+            <button onclick="closeEdit()" style="
+                padding:10px 16px; background:#555; color:white;
                 border:none; border-radius:6px; margin-right:12px;">
                 Cancel
             </button>
 
-            <button onclick="saveModalEditor('${id}')" style="
-                padding:10px 18px; background:#1b4cd4; color:white;
+            <button onclick="saveEdit('${id}')" style="
+                padding:10px 16px; background:#1b8cff; color:white;
                 border:none; border-radius:6px;">
                 Save
             </button>
@@ -979,47 +921,22 @@ async function openModalEditor(id) {
     `;
 
     overlay.style.display = "block";
+}
+<!-- END CHUNK D4 — Open Modal Editor -->
 
-    // Load statuses dynamically from DB
-    loadStatusOptions(`edit-status-${id}`, v.status);
+
+
+<!-- START CHUNK D5 — Save Modal Editor -->
+function closeEdit() {
+    document.getElementById("editOverlay").style.display = "none";
 }
 
-function closeModal() {
-    document.getElementById("editModalOverlay").style.display = "none";
-}
-
-// Fetch statuses from DB and populate dropdown
-async function loadStatusOptions(selectId, current) {
-    const { data: statuses } = await db
-        .from("statuses")
-        .select("name")
-        .order("name");
-
-    const sel = document.getElementById(selectId);
-    sel.innerHTML = "";
-
-    statuses.forEach(s => {
-        sel.innerHTML += `
-            <option value="${s.name}" ${s.name === current ? "selected" : ""}>
-                ${s.name}
-            </option>
-        `;
-    });
-}
-</script>
-<!- END CHUNK D4 — Modal Editor + Dynamic Status Options->
-
-
-
-<! -- START D5 -->
-<script>
-async function saveModalEditor(id) {
+async function saveEdit(id) {
+    const status = document.getElementById("ed-status").value;
+    const po = document.getElementById("ed-po").value.trim();
+    const pager = parseInt(document.getElementById("ed-pager").value);
+    const notes = document.getElementById("ed-notes").value.trim();
     const opId = localStorage.getItem("operator_id");
-
-    const status = document.getElementById(`edit-status-${id}`).value;
-    const po = document.getElementById(`edit-po-${id}`).value.trim();
-    const pager = parseInt(document.getElementById(`edit-pager-${id}`).value);
-    const notes = document.getElementById(`edit-notes-${id}`).value.trim();
     const now = new Date().toISOString();
 
     await db.from("vehicles").update({
@@ -1027,25 +944,27 @@ async function saveModalEditor(id) {
         po_ref: po,
         pager_number: pager,
         notes,
-        notify_time: status === "notified" ? now : null,
-        release_time: status === "released" ? now : null,
+        notify_time: (status==="notified" ? now : null),
+        release_time: (status==="released" ? now : null),
         operator_id: opId
     }).eq("id", id);
 
     await db.from("actions_log").insert({
         vehicle_id: id,
         operator_id: opId,
-        action: "modal_edit",
+        action: "edit",
         details: { status, po, pager, notes }
     });
 
-    closeModal();
+    closeEdit();
+
+    // refresh everything
     loadQueue();
     loadActivity();
     loadStats();
 }
-</script>
-<!-- END D5 -->
+<!-- END CHUNK D5 — Save Modal Editor -->
+
 
 <!-- END SECTION D -->
 
