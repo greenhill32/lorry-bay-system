@@ -541,63 +541,117 @@ async function loadQueue() {
 }
 </script>
 <!-- END C4 -->
-<!-- START CHUNK C5 — Render Queue -->
-function renderQueue(list) {
-    const box = document.querySelector(".queue-list");
-    box.innerHTML = "";
 
-    if (!list || list.length === 0) {
-        box.innerHTML = `<div style="color:#888; padding:20px;">No active vehicles</div>`;
+<!--// START CHUNK C5 — Render Queue -->
+<script>
+function renderQueue(list) {
+    const container = document.querySelector(".queue-container");
+
+    container.innerHTML = `
+        <div class="queue-header">
+            <span>Active Queue</span>
+            <span class="queue-count">${list.length} vehicles active</span>
+        </div>
+    `;
+
+    if (list.length === 0) {
+        container.innerHTML += `
+            <div style="padding:30px;text-align:center;color:#777;">
+                No active vehicles
+            </div>`;
         return;
     }
 
     list.forEach(v => {
-        const now = Date.now();
-        const checkIn = new Date(v.check_in_time).getTime();
-        const waitMins = Math.floor((now - checkIn) / 60000);
+        const checkIn = new Date(v.check_in_time);
+        const due = new Date(v.due_time);
+        const now = new Date();
 
-        // overdue colour logic
+        // ---- Calculate overdue ----
+        let overdue = Math.floor((now - due) / 60000);
+        if (overdue < 0) overdue = 0;
+
+        // ---- Colour / label defaults ----
         let colour = "green";
-        if (waitMins >= 30) colour = "amber";
-        if (waitMins >= 60) colour = "red";
-        if (waitMins >= 180) colour = "deepred";
+        let rightText = "";
+        const dueText = due.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" });
 
-        // Card HTML
-        const card = document.createElement("div");
-        card.className = `queue-card ${colour}`;
-        card.style.cursor = "pointer";
+        // ---- Special Cases (STOPPED / DELAYED) ----
+        if (v.status === "stopped") {
+            colour = "red2";
+            rightText = "<strong style='color:#ff4040;'>STOPPED</strong>";
+        }
+        else if (v.status === "delayed") {
+            colour = "amber";
+            rightText = "<strong style='color:#ffb300;'>DELAYED</strong>";
+        }
+        else if (v.status === "notified") {
+            colour = "blue";
+            rightText = "<strong style='color:#1b8cff;'>Notified</strong>";
+        }
+        else {
+            // Normal waiting logic
+            if (now >= due) colour = "amber";
+            if (overdue >= 30) colour = "red";
+            if (overdue >= 180) colour = "red2";
 
-        // Entire card opens modal editor
-        card.onclick = () => openEditVehicle(v.id);
+            rightText = overdue > 0
+                ? `${overdue} mins overdue`
+                : "On time";
+        }
 
-        card.innerHTML = `
-            <div class="row1">
-                <div class="reg">${v.registration}</div>
-                <div class="pager">Pager: ${v.pager_number || "-"}</div>
-            </div>
+        // ---- STOPPED should NOT show overdue ----
+        if (v.status === "stopped") {
+            overdue = "";
+        }
 
-            <div class="row2">
-                <div class="po">PO: ${v.po_ref || "-"}</div>
-                <div class="mins">${waitMins} mins</div>
-            </div>
+        container.innerHTML += `
+            <div class="entry ${colour}" 
+                 style="cursor:pointer;"
+                 onclick="openModalEditor('${v.id}')">
 
-            <div class="notes">${v.notes ? v.notes : "<span class='notes-empty'>No notes</span>"}</div>
+                <div class="entry-top">
 
-            <div class="actions">
-                <button class="notify-btn" onclick="event.stopPropagation(); notifyVehicle('${v.id}')">
-                    Notify
-                </button>
+                    <div>
+                        <strong>${v.registration}</strong><br>
+                        <span>${v.po_ref || "No PO"}</span><br>
 
-                <button class="release-btn" onclick="event.stopPropagation(); completeVehicle('${v.id}')">
-                    Complete
-                </button>
+                        <span style="font-size:11px;opacity:0.7;">
+                            Due at ${dueText}
+                        </span>
+
+                        <div class="pager-badge">Pager #${v.pager_number || "-"}</div>
+
+                        <!-- Notes (do not open modal when clicked) -->
+                        <div id="notes-${v.id}"
+                             class="notes-text"
+                             onclick="event.stopPropagation(); enableNotesEdit('${v.id}', \`${v.notes || ''}\`)">
+                            ${v.notes ? v.notes : "<i>Click to add notes</i>"}
+                        </div>
+                    </div>
+
+                    <div style="text-align:right;">
+                        <div>${rightText}</div>
+                        <div style="font-size:12px;opacity:0.7;">
+                            In: ${checkIn.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Buttons (must NOT trigger modal) -->
+                <div class="entry-actions" onclick="event.stopPropagation();">
+                    <button class="action-btn notify-btn" onclick="notifyVehicle('${v.id}')">Notify</button>
+                    <button class="action-btn complete-btn" onclick="completeVehicle('${v.id}')">Complete</button>
+                    <button class="action-btn" style="background:#777;" onclick="undoVehicle('${v.id}')">Undo</button>
+                </div>
+
             </div>
         `;
-
-        box.appendChild(card);
     });
 }
-<!-- END CHUNK C5 — Render Queue -->
+</script>
+<!--// END CHUNK C5 — Render Queue -->
 
 
 <!-- START C6 -->
@@ -926,17 +980,15 @@ async function openEditVehicle(id) {
 
 
 
-<!-- START CHUNK D5 — Save Modal Editor -->
-function closeEdit() {
-    document.getElementById("editOverlay").style.display = "none";
-}
-
-async function saveEdit(id) {
-    const status = document.getElementById("ed-status").value;
-    const po = document.getElementById("ed-po").value.trim();
-    const pager = parseInt(document.getElementById("ed-pager").value);
-    const notes = document.getElementById("ed-notes").value.trim();
+<! -- START D5 -->
+<script>
+async function saveModalEditor(id) {
     const opId = localStorage.getItem("operator_id");
+
+    const status = document.getElementById(`edit-status-${id}`).value;
+    const po = document.getElementById(`edit-po-${id}`).value.trim();
+    const pager = parseInt(document.getElementById(`edit-pager-${id}`).value);
+    const notes = document.getElementById(`edit-notes-${id}`).value.trim();
     const now = new Date().toISOString();
 
     await db.from("vehicles").update({
@@ -944,27 +996,25 @@ async function saveEdit(id) {
         po_ref: po,
         pager_number: pager,
         notes,
-        notify_time: (status==="notified" ? now : null),
-        release_time: (status==="released" ? now : null),
+        notify_time: status === "notified" ? now : null,
+        release_time: status === "released" ? now : null,
         operator_id: opId
     }).eq("id", id);
 
     await db.from("actions_log").insert({
         vehicle_id: id,
         operator_id: opId,
-        action: "edit",
+        action: "modal_edit",
         details: { status, po, pager, notes }
     });
 
-    closeEdit();
-
-    // refresh everything
+    closeModal();
     loadQueue();
     loadActivity();
     loadStats();
 }
-<!-- END CHUNK D5 — Save Modal Editor -->
-
+</script>
+<!-- END D5 -->
 
 <!-- END SECTION D -->
 
