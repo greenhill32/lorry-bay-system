@@ -558,7 +558,10 @@ function renderQueue(list) {
     `;
 
     if (list.length === 0) {
-        container.innerHTML += `<div style="padding:30px;text-align:center;color:#777;">No active vehicles</div>`;
+        container.innerHTML += `
+            <div style="padding:30px;text-align:center;color:#777;">
+                No active vehicles
+            </div>`;
         return;
     }
 
@@ -567,66 +570,51 @@ function renderQueue(list) {
         const due = new Date(v.due_time);
         const now = new Date();
 
+        // ---- Calculate overdue ----
         let overdue = Math.floor((now - due) / 60000);
         if (overdue < 0) overdue = 0;
 
+        // ---- Colour / label defaults ----
         let colour = "green";
-        let statusLabel = "";
-        let accentBorder = "";
+        let rightText = "";
+        const dueText = due.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" });
 
-        /* -------------------------------------
-           SPECIAL STATUSES FIRST (STOPPED/DELAYED)
-        ------------------------------------- */
-
+        // ---- Special Cases (STOPPED / DELAYED) ----
         if (v.status === "stopped") {
-            colour = "red2";              // darkest red
-            statusLabel = "<strong style='color:#ff3b3b;'>STOPPED</strong>";
-            overdue = "";                 // hide the overdue time
+            colour = "red2";
+            rightText = "<strong style='color:#ff4040;'>STOPPED</strong>";
         }
-
         else if (v.status === "delayed") {
-            colour = "amber";             // orange
-            statusLabel = "<strong style='color:#ffb300;'>DELAYED</strong>";
-            overdue = "";                 // hide normal overdue calc
+            colour = "amber";
+            rightText = "<strong style='color:#ffb300;'>DELAYED</strong>";
         }
-
-        /* -------------------------------------
-           STANDARD LOGIC (WAITING / NOTIFIED)
-        ------------------------------------- */
-
         else if (v.status === "notified") {
             colour = "blue";
-            statusLabel = "<strong style='color:#1b8cff;'>Notified</strong>";
+            rightText = "<strong style='color:#1b8cff;'>Notified</strong>";
         }
-
         else {
-            // waiting with time-based colours
+            // Normal waiting logic
             if (now >= due) colour = "amber";
             if (overdue >= 30) colour = "red";
             if (overdue >= 180) colour = "red2";
+
+            rightText = overdue > 0
+                ? `${overdue} mins overdue`
+                : "On time";
         }
 
-        const dueText = due.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" });
-
-        /* -------------------------------------
-           OVERRIDE right-hand label text
-        ------------------------------------- */
-
-        let rightText = "";
-        if (statusLabel) {
-            rightText = statusLabel;
-        } else {
-            rightText = (overdue > 0 ? overdue + " mins overdue" : "On time");
+        // ---- STOPPED should NOT show overdue ----
+        if (v.status === "stopped") {
+            overdue = "";
         }
-
-        /* -------------------------------------
-           CARD HTML
-        ------------------------------------- */
 
         container.innerHTML += `
-            <div class="entry ${colour}" style="cursor:pointer;" onclick="openModalEditor('${v.id}')">
+            <div class="entry ${colour}" 
+                 style="cursor:pointer;"
+                 onclick="openModalEditor('${v.id}')">
 
                 <div class="entry-top">
+
                     <div>
                         <strong>${v.registration}</strong><br>
                         <span>${v.po_ref || "No PO"}</span><br>
@@ -637,6 +625,7 @@ function renderQueue(list) {
 
                         <div class="pager-badge">Pager #${v.pager_number || "-"}</div>
 
+                        <!-- Notes (do not open modal when clicked) -->
                         <div id="notes-${v.id}"
                              class="notes-text"
                              onclick="event.stopPropagation(); enableNotesEdit('${v.id}', \`${v.notes || ''}\`)">
@@ -650,9 +639,10 @@ function renderQueue(list) {
                             In: ${checkIn.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}
                         </div>
                     </div>
+
                 </div>
 
-                <!-- Button Row -->
+                <!-- Buttons (must NOT trigger modal) -->
                 <div class="entry-actions" onclick="event.stopPropagation();">
                     <button class="action-btn notify-btn" onclick="notifyVehicle('${v.id}')">Notify</button>
                     <button class="action-btn complete-btn" onclick="completeVehicle('${v.id}')">Complete</button>
