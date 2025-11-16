@@ -395,13 +395,14 @@
 <!-- END B5 -->
 
 
-<!-- START CHUNK B6 — Modal HTML -->
-<!-- Modal Overlay -->
-<div id="editOverlay" style="
-    position:fixed; top:0; left:0; right:0; bottom:0;
+<!-- START B6 -->
+<div id="editModalOverlay" style="
+    position:fixed;
+    top:0; left:0; right:0; bottom:0;
     background:rgba(0,0,0,0.6);
-    display:none; z-index:9999;">
-    
+    display:none;
+    z-index:9999;
+">
     <div id="editModal" style="
         background:#1c1c1c;
         color:#fff;
@@ -409,10 +410,12 @@
         margin:80px auto;
         padding:25px;
         border-radius:12px;
-        border:1px solid #333;">
+        border:1px solid #333;
+    ">
+        <!-- Modal content injected in D4 -->
     </div>
 </div>
-<!-- END CHUNK B6 — Modal HTML -->
+<!-- END B6 -->
 
 <!-- END SECTION B -->
 <!-- START SECTION C -->
@@ -918,8 +921,9 @@ async function searchVehicles() {
 <!-- END D3 -->
 
 
-<!-- START CHUNK D4 — Open Modal Editor -->
-async function openEditVehicle(id) {
+<!-- START CHUNK D4 — Modal Editor + Dynamic Status Options
+<script>
+async function openModalEditor(id) {
     const { data: v } = await db
         .from("vehicles")
         .select("*")
@@ -927,47 +931,47 @@ async function openEditVehicle(id) {
         .single();
 
     const modal = document.getElementById("editModal");
-    const overlay = document.getElementById("editOverlay");
+    const overlay = document.getElementById("editModalOverlay");
 
     modal.innerHTML = `
-        <h2>Edit ${v.registration}</h2>
+        <h2 style="color:#fff;">Edit ${v.registration}</h2>
 
-        <label>Status</label>
-        <select id="ed-status" style="
-            width:100%; padding:10px; margin-bottom:12px;
-            background:#222; border:1px solid #444; border-radius:6px; color:#fff;">
-            <option value="waiting"  ${v.status==="waiting"?"selected":""}>waiting</option>
-            <option value="notified" ${v.status==="notified"?"selected":""}>notified</option>
-            <option value="released" ${v.status==="released"?"selected":""}>released</option>
-            <option value="delayed"  ${v.status==="delayed"?"selected":""}>delayed</option>
-            <option value="stopped"  ${v.status==="stopped"?"selected":""}>stopped</option>
-        </select>
+        <label style="color:#bbb;">Status:</label><br>
+        <select id="edit-status-${id}" style="
+            padding:10px; margin:6px 0 16px 0; 
+            border-radius:6px; 
+            background:#1c1c1c; 
+            color:#fff;
+            border:1px solid #444; width:180px;"
+        ></select>
 
-        <label>PO / Reference</label>
-        <input id="ed-po" value="${v.po_ref || ""}" style="
-            width:100%; padding:10px; margin-bottom:12px;
-            background:#222; border:1px solid #444; border-radius:6px; color:#fff;">
+        <label style="color:#bbb;">PO / Reference:</label>
+        <input id="edit-po-${id}" value="${v.po_ref || ""}" style="
+            width:100%; padding:10px; 
+            background:#1c1c1c; color:#fff;
+            border:1px solid #444; border-radius:6px; margin-bottom:16px;">
 
-        <label>Pager Number</label>
-        <input id="ed-pager" type="number" value="${v.pager_number || ""}" style="
-            width:100%; padding:10px; margin-bottom:12px;
-            background:#222; border:1px solid #444; border-radius:6px; color:#fff;">
+        <label style="color:#bbb;">Pager Number:</label>
+        <input id="edit-pager-${id}" type="number" value="${v.pager_number || ""}" style="
+            width:100%; padding:10px;
+            background:#1c1c1c; color:#fff;
+            border:1px solid #444; border-radius:6px; margin-bottom:16px;">
 
-        <label>Notes</label>
-        <textarea id="ed-notes" style="
-            width:100%; height:80px; padding:10px;
-            background:#222; border:1px solid #444; border-radius:6px; color:#fff;
-        ">${v.notes || ""}</textarea>
+        <label style="color:#bbb;">Notes:</label>
+        <textarea id="edit-notes-${id}" style="
+            width:100%; height:90px; padding:10px;
+            background:#1c1c1c; color:#fff;
+            border:1px solid #444; border-radius:6px;">${v.notes || ""}</textarea>
 
-        <div style="margin-top:18px; text-align:right;">
-            <button onclick="closeEdit()" style="
-                padding:10px 16px; background:#555; color:white;
+        <div style="margin-top:22px; text-align:right;">
+            <button onclick="closeModal()" style="
+                padding:10px 18px; background:#555; color:white;
                 border:none; border-radius:6px; margin-right:12px;">
                 Cancel
             </button>
 
-            <button onclick="saveEdit('${id}')" style="
-                padding:10px 16px; background:#1b8cff; color:white;
+            <button onclick="saveModalEditor('${id}')" style="
+                padding:10px 18px; background:#1b4cd4; color:white;
                 border:none; border-radius:6px;">
                 Save
             </button>
@@ -975,8 +979,35 @@ async function openEditVehicle(id) {
     `;
 
     overlay.style.display = "block";
+
+    // Load statuses dynamically from DB
+    loadStatusOptions(`edit-status-${id}`, v.status);
 }
-<!-- END CHUNK D4 — Open Modal Editor -->
+
+function closeModal() {
+    document.getElementById("editModalOverlay").style.display = "none";
+}
+
+// Fetch statuses from DB and populate dropdown
+async function loadStatusOptions(selectId, current) {
+    const { data: statuses } = await db
+        .from("statuses")
+        .select("name")
+        .order("name");
+
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = "";
+
+    statuses.forEach(s => {
+        sel.innerHTML += `
+            <option value="${s.name}" ${s.name === current ? "selected" : ""}>
+                ${s.name}
+            </option>
+        `;
+    });
+}
+</script>
+<!- END CHUNK D4 — Modal Editor + Dynamic Status Options->
 
 
 
