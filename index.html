@@ -895,7 +895,7 @@ async function searchVehicles() {
 <!-- END D3 -->
 
 
-<!-- START D4 -->
+// START CHUNK D4 — Modal Editor + Dynamic Status Options
 <script>
 async function openModalEditor(id) {
     const { data: v } = await db
@@ -916,11 +916,8 @@ async function openModalEditor(id) {
             border-radius:6px; 
             background:#1c1c1c; 
             color:#fff;
-            border:1px solid #444; width:180px;">
-            <option value="waiting"  ${v.status==="waiting"?"selected":""}>waiting</option>
-            <option value="notified" ${v.status==="notified"?"selected":""}>notified</option>
-            <option value="released" ${v.status==="released"?"selected":""}>released</option>
-        </select>
+            border:1px solid #444; width:180px;"
+        ></select>
 
         <label style="color:#bbb;">PO / Reference:</label>
         <input id="edit-po-${id}" value="${v.po_ref || ""}" style="
@@ -956,13 +953,36 @@ async function openModalEditor(id) {
     `;
 
     overlay.style.display = "block";
+
+    // Load statuses dynamically from DB
+    loadStatusOptions(`edit-status-${id}`, v.status);
 }
 
 function closeModal() {
     document.getElementById("editModalOverlay").style.display = "none";
 }
+
+// Fetch statuses from DB and populate dropdown
+async function loadStatusOptions(selectId, current) {
+    const { data: statuses } = await db
+        .from("statuses")
+        .select("name")
+        .order("name");
+
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = "";
+
+    statuses.forEach(s => {
+        sel.innerHTML += `
+            <option value="${s.name}" ${s.name === current ? "selected" : ""}>
+                ${s.name}
+            </option>
+        `;
+    });
+}
 </script>
-<!-- END D4 -->
+// END CHUNK D4 — Modal Editor + Dynamic Status Options
+
 
 
 <!-- START D5 -->
