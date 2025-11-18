@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Driver Alert Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+    :root {
+        --bg: #0d0d0d;
+        --card: #1c1c1c;
+        --text: #e6e6e6;
+        --accent: #1b8cff;
+        --loading: #1b8cff;
+    }
+
+    body {
+        margin: 0;
+        background: var(--bg);
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        color: var(--text);
+        text-align: center;
+        animation: flashAmber 1s infinite;
+    }
+
+    @keyframes flashAmber {
+        0%   { background:#0d0d0d; }
+        50%  { background:#ffb300; }
+        100% { background:#0d0d0d; }
+    }
+
+    .card {
+        max-width: 600px;
+        margin: 40px auto;
+        padding: 30px;
+        background: var(--card);
+        border-radius: 16px;
+        border: 1px solid #333;
+        box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
+
+    .big {
+        font-size: 38px;
+        font-weight: bold;
+        margin-bottom: 12px;
+        color: var(--loading);
+    }
+
+    .sub {
+        font-size: 18px;
+        margin-bottom: 20px;
+        opacity: 0.9;
+    }
+
+    .registration {
+        font-size: 46px;
+        font-weight: 900;
+        margin: 25px 0;
+        color: var(--accent);
+    }
+
+    .small-note {
+        margin-top: 20px;
+        font-size: 16px;
+        opacity: 0.85;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="card">
+    <div class="big">YOU ARE BEING CALLED</div>
+    <div class="sub">Proceed immediately when instructed</div>
+
+    <div class="registration">PN73 EYK</div>
+
+    <div class="sub" style="font-size:22px;">
+        Proceed to loading area
+    </div>
+
+    <div class="small-note">Please remain in your cab unless told otherwise.</div>
+</div>
+
+</body>
+</html>
