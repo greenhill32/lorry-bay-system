@@ -302,7 +302,6 @@
 <!-- END B1 -->
 
 
-
 <!-- START B2 -->
 <div id="header" class="header">
 
@@ -312,10 +311,106 @@
 
     <div class="header-right">
         <button class="add-btn" onclick="togglePanel()">Add Vehicle</button>
-        <span id="operatorName" style="color:#fff;">Loading...</span>
+
+        <!-- AVATAR + DROPDOWN -->
+        <div style="position:relative;">
+            <div id="avatarBtn"
+                style="
+                    width:42px;
+                    height:42px;
+                    border-radius:50%;
+                    background:#2a2a2a;
+                    border:1px solid #444;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    font-size:18px;
+                    cursor:pointer;
+                    user-select:none;
+                ">
+                ??
+            </div>
+
+            <div id="avatarMenu"
+                style="
+                    position:absolute;
+                    top:48px;
+                    right:0;
+                    background:#1c1c1c;
+                    border:1px solid #333;
+                    border-radius:8px;
+                    width:170px;
+                    padding:8px 0;
+                    display:none;
+                    z-index:9999;
+                ">
+                <div id="menuName"
+                    style="
+                        padding:10px 14px;
+                        color:#ddd;
+                        border-bottom:1px solid #333;
+                        font-size:14px;
+                    ">
+                    Loading...
+                </div>
+
+                <div onclick="logoutUser()"
+                    style="
+                        padding:10px 14px;
+                        color:#fff;
+                        cursor:pointer;
+                        font-size:16px;
+                    ">
+                    Logout
+                </div>
+            </div>
+        </div>
     </div>
 
 </div>
+
+<script>
+// Logout
+function logoutUser() {
+    localStorage.removeItem("operator_id");
+    window.location.href = "login.html";
+}
+
+// Avatar dropdown toggle
+document.addEventListener("click", e => {
+    const btn = document.getElementById("avatarBtn");
+    const menu = document.getElementById("avatarMenu");
+
+    if (btn.contains(e.target)) {
+        menu.style.display = (menu.style.display === "block" ? "none" : "block");
+    } else if (!menu.contains(e.target)) {
+        menu.style.display = "none";
+    }
+});
+
+// Inject operator name + initials
+(async () => {
+    const opId = localStorage.getItem("operator_id");
+    if (!opId) return;
+
+    const { data: op } = await db
+        .from("operators")
+        .select("*")
+        .eq("id", opId)
+        .single();
+
+    const opName = op?.name || "Unknown";
+    document.getElementById("menuName").textContent = opName;
+
+    const initials = opName
+        .split(" ")
+        .map(x => x[0]?.toUpperCase() || "")
+        .join("")
+        .slice(0, 2);
+
+    document.getElementById("avatarBtn").textContent = initials;
+})();
+</script>
 <!-- END B2 -->
 
 
@@ -432,24 +527,41 @@ const db = supabase.createClient(supabaseUrl, supabaseKey);
 </script>
 <!-- END C1 -->
 
-
-<!-- START C2 -->
+// START C2 — Operator Loader (fixed avatar)
 <script>
 (async () => {
     const opId = localStorage.getItem("operator_id");
-    if (!opId) { window.location.href = "login.html"; return; }
+    if (!opId) { 
+        window.location.href = "login.html"; 
+        return; 
+    }
 
-    const { data } = await db
+    const { data: op } = await db
         .from("operators")
         .select("name")
         .eq("id", opId)
         .single();
 
-    document.getElementById("operatorName").textContent =
-        data?.name || "Unknown";
+    const opName = op?.name || "Unknown";
+
+    // Avatar menu name
+    if (document.getElementById("menuName")) {
+        document.getElementById("menuName").textContent = opName;
+    }
+
+    // Avatar initials
+    if (document.getElementById("avatarBtn")) {
+        const initials = opName
+            .split(" ")
+            .map(x => x[0]?.toUpperCase() || "")
+            .join("")
+            .slice(0, 2);
+
+        document.getElementById("avatarBtn").textContent = initials;
+    }
 })();
 </script>
-<!-- END C2 -->
+// END C2 — Operator Loader (fixed avatar)
 
 <!-- START C3 -->
 <script>
