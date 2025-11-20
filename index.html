@@ -563,34 +563,35 @@ const db = supabase.createClient(supabaseUrl, supabaseKey);
 </script>
 // END C2 — Operator Loader (fixed avatar)
 
-<!-- START C3 -->
+<!-- START C3 — submitVehicle (HTML-safe, QR auto-launch) -->
 <script>
 let submitting = false;
-let prebookCache = [];     // store loaded prebookings
-let prebookExportFlag = false; // used later for export highlighting
+let prebookCache = [];
+let prebookExportFlag = false;
 
 function togglePanel() {
     document.getElementById("panel").classList.toggle("panel-visible");
-    loadPrebooks();  // load when panel is opened
+    loadPrebooks();
 }
 
 async function loadPrebooks() {
     const sel = document.getElementById("prebookSelect");
-    sel.innerHTML = `<option value="">-- Select Pre-Booked Load --</option>`;
+    sel.innerHTML = "<option value=''>-- Select Pre-Booked Load --</option>";
 
-    const { data, error } = await db
+    const { data } = await db
         .from("prebookings")
         .select("*")
         .eq("consumed", false)
         .order("expected_date", { ascending: true })
         .order("expected_time", { ascending: true });
 
-    if (error || !data) return;
+    prebookCache = data || [];
 
-    prebookCache = data;
+    prebookCache.forEach(p => {
+        const label =
+            `${p.po_ref} — ${p.registration || "No Reg"} — ${p.expected_date || ""} ${p.expected_time?.slice(0,5) || ""}` +
+            (p.is_export ? " — EXPORT" : "");
 
-    data.forEach(p => {
-        const label = `${p.po_ref} — ${p.registration || "No Reg"} — ${p.expected_date || ""} ${p.expected_time?.slice(0,5) || ""}${p.is_export ? " — EXPORT" : ""}`;
         sel.innerHTML += `<option value="${p.id}">${label}</option>`;
     });
 }
@@ -602,12 +603,10 @@ function applyPrebook() {
     const pb = prebookCache.find(x => x.id === id);
     if (!pb) return;
 
-    // Fill UI
     document.getElementById("poInput").value = pb.po_ref || "";
     document.getElementById("regInput").value = pb.registration || "";
     document.getElementById("notesInput").value = pb.notes || "";
 
-    // store classification result
     prebookExportFlag = pb.is_export === true;
 }
 
@@ -635,24 +634,30 @@ async function submitVehicle() {
     }
 
     const opId = localStorage.getItem("operator_id");
-    if (!opId) { window.location.href = "login.html"; return; }
+    if (!opId) {
+        window.location.href = "login.html";
+        return;
+    }
 
     const now = new Date().toISOString();
     const due = new Date(Date.now() + quoted * 60000).toISOString();
 
-    // Insert new vehicle
-    const { data, error } = await db.from("vehicles").insert({
-        registration: reg,
-        po_ref: po,
-        pager_number: pager,
-        notes: notes,
-        quoted_minutes: quoted,
-        due_time: due,
-        status: "waiting",
-        check_in_time: now,
-        operator_id: opId,
-        classification: prebookExportFlag ? "export" : "normal"
-    }).select();
+    /* insert vehicle */
+    const { data, error } = await db
+        .from("vehicles")
+        .insert({
+            registration: reg,
+            po_ref: po,
+            pager_number: pager,
+            notes: notes,
+            quoted_minutes: quoted,
+            due_time: due,
+            status: "waiting",
+            check_in_time: now,
+            operator_id: opId,
+            classification: prebookExportFlag ? "export" : "normal"
+        })
+        .select();
 
     if (error) {
         alert("Error: " + error.message);
@@ -662,9 +667,9 @@ async function submitVehicle() {
         return;
     }
 
-    const vehicleId = data[0]?.id;
+    const vehicleId = data[0].id;
 
-    // Log action
+    /* log action */
     await db.from("actions_log").insert({
         vehicle_id: vehicleId,
         operator_id: opId,
@@ -672,7 +677,7 @@ async function submitVehicle() {
         details: {}
     });
 
-    // MARK PREBOOK AS CONSUMED (optional for later)
+    /* mark prebook consumed */
     const selected = document.getElementById("prebookSelect").value;
     if (selected) {
         await db
@@ -681,11 +686,14 @@ async function submitVehicle() {
             .eq("id", selected);
     }
 
+    /* auto-launch QR screen in new tab */
+    window.open(`qr-screen.html?uid=${vehicleId}`, "_blank");
+
+    /* refresh dashboard */
     loadQueue();
     loadStats();
     loadActivity();
 
-    // Reset state
     submitting = false;
     btn.style.pointerEvents = "auto";
     btn.style.opacity = "1";
@@ -694,7 +702,7 @@ async function submitVehicle() {
     togglePanel();
 }
 </script>
-<!-- END C3 -->
+<!-- END C3 — submitVehicle (HTML-safe, QR auto-launch) -->
 
 
 <!-- START C4 -->
