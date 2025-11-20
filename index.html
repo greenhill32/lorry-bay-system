@@ -41,15 +41,22 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 350px;
+
+        /* Increased height to support dropdown */
+        min-height: 420px;
+
         background: #1c1c1c;
         box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         padding: 20px 30px;
-        transform: translateY(-100%);
+
+        /* FIX: push completely off-screen */
+        transform: translateY(calc(-100% - 40px));
+
         transition: transform 0.8s ease;
         z-index: 999;
         color: #fff;
     }
+
     .panel-visible { transform: translateY(0); }
 
     .panel-title {
@@ -185,83 +192,57 @@
     }
 </style>
 <!-- END A4 -->
-
 <!-- START A5 -->
 <style>
+
+    /* BASE ENTRY CARD */
     .entry {
         padding: 15px;
         margin-bottom: 14px;
         border-radius: 8px;
-        border-left: 20px solid transparent;
+        border-left: 50px solid transparent;
         background: #252525;
         position: relative;
         font-size: 18px;
         color: #e6e6e6;
+        transition: 0.3s;
     }
 
-    .green  { border-left-color: #46d369; }
-    .amber  { border-left-color: #ffb300; }
-    .red    { border-left-color: #ff5252; }
-    .red2   { border-left-color: #d32f2f; }
+    /* NORMAL COLOURS */
+    .green { border-left-color: #22c55e; }
+    .amber { border-left-color: #f59e0b; }
+    .red { border-left-color: #ef4444; }
+    .red2 { border-left-color: #7f1d1d; }
 
-    .entry-top { display: flex; justify-content: space-between; }
+    /* EXPORT SUPER HIGHLIGHT MODE */
+    .export-card {
+        border-left-color: #1b8cff !important;     /* big blue bar */
+        background: linear-gradient(90deg,
+                    rgba(27,140,255,0.20),
+                    rgba(27,140,255,0.05)) !important;
+        box-shadow: 0 0 22px rgba(27,140,255,0.55),
+                    0 0 10px rgba(27,140,255,0.35) !important;
+        animation: exportPulse 1.8s infinite ease-in-out;
+    }
 
-    .entry-top strong {
-        font-size: 20px;
-        font-weight: bold;
+    @keyframes exportPulse {
+        0%   { box-shadow: 0 0 14px rgba(27,140,255,0.45); }
+        50%  { box-shadow: 0 0 28px rgba(27,140,255,0.85); }
+        100% { box-shadow: 0 0 14px rgba(27,140,255,0.45); }
+    }
+
+    /* EXPORT BADGE */
+    .export-banner {
+        display: inline-block;
+        background: #1b8cff;
         color: #fff;
-    }
-
-    /* STATUS BLOCK */
-    .status-block {
-        position: absolute;
-        top: 10px;
-        right: 15px;
-        font-size: 30px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-        opacity: 0.85;
-        transition: opacity 0.15s;
-    }
-    .status-block:hover { opacity: 1; }
-
-    .notes-text {
-        margin-top: 4px;
-        font-size: 15px;
-        opacity: 0.85;
-        cursor: pointer;
-    }
-
-    .notes-input {
-        width: 100%;
-        font-size: 15px;
-        margin-top: 4px;
-        padding: 4px;
-        background:#333;
-        border: 1px solid #555;
-        border-radius:4px;
-        color:#fff;
-    }
-
-    .entry-actions {
-        margin-top: 10px;
-        display: flex;
-        gap: 8px;
-    }
-
-    .action-btn {
-        padding: 6px 10px;
-        font-size: 14px;
-        border: none;
+        padding: 3px 10px;
+        font-size: 13px;
+        font-weight: bold;
         border-radius: 6px;
-        cursor: pointer;
-        color: white;
+        margin-bottom: 8px;
     }
 
-    .notify-btn   { background: #1b4cd4; }
-    .complete-btn { background: #444; }
 </style>
 <!-- END A5 -->
 
@@ -273,11 +254,27 @@
 <!-- END SECTION A -->
 
 <!-- START SECTION B -->
-
 <!-- START B1 -->
 <div id="panel" class="slide-panel">
 
     <div class="panel-title">Add New Lorry</div>
+
+    <!-- NEW: Expected Loads Dropdown -->
+    <label style="color:#ccc; margin-top:10px;">Expected Loads</label>
+    <select id="prebookSelect"
+        onchange="applyPrebook()"
+        style="
+            width:100%;
+            padding:12px;
+            background:#2a2a2a;
+            color:#fff;
+            border:1px solid #444;
+            border-radius:8px;
+            font-size:16px;
+            margin-bottom:12px;
+        ">
+        <option value="">-- Select Pre-Booked Load --</option>
+    </select>
 
     <div class="form-row">
         <input type="text" id="poInput" placeholder="PO / Reference Number">
@@ -303,6 +300,7 @@
     <div id="submitBtn" class="submit-btn" onclick="submitVehicle()">Submit</div>
 </div>
 <!-- END B1 -->
+
 
 
 <!-- START B2 -->
@@ -351,11 +349,17 @@
 </div>
 <!-- END B3 -->
 
+
 <!-- START B4 -->
 <div class="main-split">
 
     <div class="left-side">
         <div class="queue-container">
+            <div class="queue-header">
+                <span>Active Queue</span>
+                <span class="queue-count" style="color:#bbb;">Loading...</span>
+            </div>
+
             <!-- Queue items inserted by renderQueue() -->
         </div>
     </div>
@@ -368,7 +372,6 @@
 
 </div>
 <!-- END B4 -->
-
 
 
 <!-- START B5 -->
@@ -448,13 +451,52 @@ const db = supabase.createClient(supabaseUrl, supabaseKey);
 </script>
 <!-- END C2 -->
 
-
 <!-- START C3 -->
 <script>
 let submitting = false;
+let prebookCache = [];     // store loaded prebookings
+let prebookExportFlag = false; // used later for export highlighting
 
 function togglePanel() {
     document.getElementById("panel").classList.toggle("panel-visible");
+    loadPrebooks();  // load when panel is opened
+}
+
+async function loadPrebooks() {
+    const sel = document.getElementById("prebookSelect");
+    sel.innerHTML = `<option value="">-- Select Pre-Booked Load --</option>`;
+
+    const { data, error } = await db
+        .from("prebookings")
+        .select("*")
+        .eq("consumed", false)
+        .order("expected_date", { ascending: true })
+        .order("expected_time", { ascending: true });
+
+    if (error || !data) return;
+
+    prebookCache = data;
+
+    data.forEach(p => {
+        const label = `${p.po_ref} — ${p.registration || "No Reg"} — ${p.expected_date || ""} ${p.expected_time?.slice(0,5) || ""}${p.is_export ? " — EXPORT" : ""}`;
+        sel.innerHTML += `<option value="${p.id}">${label}</option>`;
+    });
+}
+
+function applyPrebook() {
+    const id = document.getElementById("prebookSelect").value;
+    if (!id) return;
+
+    const pb = prebookCache.find(x => x.id === id);
+    if (!pb) return;
+
+    // Fill UI
+    document.getElementById("poInput").value = pb.po_ref || "";
+    document.getElementById("regInput").value = pb.registration || "";
+    document.getElementById("notesInput").value = pb.notes || "";
+
+    // store classification result
+    prebookExportFlag = pb.is_export === true;
 }
 
 async function submitVehicle() {
@@ -474,9 +516,9 @@ async function submitVehicle() {
     reg = reg.replace(/\s+/g, "").toUpperCase();
     if (!reg) {
         alert("Registration required");
-        submitting=false;
-        btn.style.pointerEvents="auto";
-        btn.style.opacity="1";
+        submitting = false;
+        btn.style.pointerEvents = "auto";
+        btn.style.opacity = "1";
         return;
     }
 
@@ -486,6 +528,7 @@ async function submitVehicle() {
     const now = new Date().toISOString();
     const due = new Date(Date.now() + quoted * 60000).toISOString();
 
+    // Insert new vehicle
     const { data, error } = await db.from("vehicles").insert({
         registration: reg,
         po_ref: po,
@@ -495,57 +538,79 @@ async function submitVehicle() {
         due_time: due,
         status: "waiting",
         check_in_time: now,
-        operator_id: opId
+        operator_id: opId,
+        classification: prebookExportFlag ? "export" : "normal"
     }).select();
 
     if (error) {
-        if (error.message.includes("unique_active_registration")) {
-            alert(`Vehicle ${reg} is already booked in.`);
-        } else {
-            alert("Error: " + error.message);
-        }
-        submitting=false;
-        btn.style.pointerEvents="auto";
-        btn.style.opacity="1";
+        alert("Error: " + error.message);
+        submitting = false;
+        btn.style.pointerEvents = "auto";
+        btn.style.opacity = "1";
         return;
     }
 
+    const vehicleId = data[0]?.id;
+
+    // Log action
     await db.from("actions_log").insert({
-        vehicle_id: data[0].id,
+        vehicle_id: vehicleId,
         operator_id: opId,
         action: "check_in",
         details: {}
     });
 
-    window.location.href = `qr-screen.html?uid=${data[0].id}`;
+    // MARK PREBOOK AS CONSUMED (optional for later)
+    const selected = document.getElementById("prebookSelect").value;
+    if (selected) {
+        await db
+            .from("prebookings")
+            .update({ consumed: true })
+            .eq("id", selected);
+    }
+
+    loadQueue();
+    loadStats();
+    loadActivity();
+
+    // Reset state
+    submitting = false;
+    btn.style.pointerEvents = "auto";
+    btn.style.opacity = "1";
+    prebookExportFlag = false;
+
+    togglePanel();
 }
 </script>
 <!-- END C3 -->
 
 
-
 <!-- START C4 -->
 <script>
 async function loadQueue() {
-    const activeStatuses = ["waiting", "notified", "delayed", "stopped"];
-
-    const { data, error } = await db
+    const { data } = await db
         .from("vehicles")
-        .select("id, registration, po_ref, pager_number, notes, check_in_time, due_time, quoted_minutes, status")
-        .in("status", activeStatuses)
+        .select(`
+            id,
+            registration,
+            po_ref,
+            pager_number,
+            notes,
+            check_in_time,
+            due_time,
+            quoted_minutes,
+            status,
+            classification
+        `)
+        .in("status", ["waiting", "notified"])
         .order("check_in_time", { ascending: true });
 
-    if (error) {
-        console.error("loadQueue error:", error);
-        return;
-    }
-
-    renderQueue(data);
+    // fail-safe: ensure an array is passed
+    renderQueue(data || []);
 }
 </script>
 <!-- END C4 -->
-
-<!--// START CHUNK C5 — Render Queue -->
+<!-- START C5 -->
 <script>
 function renderQueue(list) {
     const container = document.querySelector(".queue-container");
@@ -557,84 +622,63 @@ function renderQueue(list) {
         </div>
     `;
 
-    if (list.length === 0) {
-        container.innerHTML += `
-            <div style="padding:30px;text-align:center;color:#777;">
-                No active vehicles
-            </div>`;
+    if (!list || list.length === 0) {
+        container.innerHTML += `<div style="padding:30px;text-align:center;color:#777;">No active vehicles</div>`;
         return;
     }
 
     list.forEach(v => {
+
         const checkIn = new Date(v.check_in_time);
         const due = new Date(v.due_time);
         const now = new Date();
 
-        // ---- Calculate overdue ----
         let overdue = Math.floor((now - due) / 60000);
         if (overdue < 0) overdue = 0;
 
-        // ---- Colour / label defaults ----
         let colour = "green";
-        let rightText = "";
+        if (now >= due) colour = "amber";
+        if (overdue >= 30) colour = "red";
+        if (overdue >= 180) colour = "red2";
+
+        const isExport = v.classification === "export";
+        const cardClass = isExport ? "export-card" : colour;
+
         const dueText = due.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" });
 
-        // ---- Special Cases (STOPPED / DELAYED) ----
-        if (v.status === "stopped") {
-            colour = "red2";
-            rightText = "<strong style='color:#ff4040;'>STOPPED</strong>";
-        }
-        else if (v.status === "delayed") {
-            colour = "amber";
-            rightText = "<strong style='color:#ffb300;'>DELAYED</strong>";
-        }
-        else if (v.status === "notified") {
-            colour = "blue";
-            rightText = "<strong style='color:#1b8cff;'>Notified</strong>";
-        }
-        else {
-            // Normal waiting logic
-            if (now >= due) colour = "amber";
-            if (overdue >= 30) colour = "red";
-            if (overdue >= 180) colour = "red2";
-
-            rightText = overdue > 0
-                ? `${overdue} mins overdue`
-                : "On time";
-        }
-
-        // ---- STOPPED should NOT show overdue ----
-        if (v.status === "stopped") {
-            overdue = "";
-        }
-
         container.innerHTML += `
-            <div class="entry ${colour}" 
-                 style="cursor:pointer;"
-                 onclick="openModalEditor('${v.id}')">
+            <div class="entry ${cardClass}">
 
-                <div class="entry-top">
+                <div class="entry-top" onclick="openModalEditor('${v.id}')">
 
                     <div>
+
+                        ${isExport ? `
+                            <div class="export-banner">EXPORT LOAD</div>
+                        ` : ""}
+
                         <strong>${v.registration}</strong><br>
                         <span>${v.po_ref || "No PO"}</span><br>
 
-                        <span style="font-size:11px;opacity:0.7;">
-                            Due at ${dueText}
-                        </span>
-
+                        <span style="font-size:11px;opacity:0.7;">Due at ${dueText}</span>
                         <div class="pager-badge">Pager #${v.pager_number || "-"}</div>
 
-                        <!-- Notes (do not open modal when clicked) -->
                         <div id="notes-${v.id}"
                              class="notes-text"
                              onclick="event.stopPropagation(); enableNotesEdit('${v.id}', \`${v.notes || ''}\`)">
                             ${v.notes ? v.notes : "<i>Click to add notes</i>"}
                         </div>
+
                     </div>
 
                     <div style="text-align:right;">
-                        <div>${rightText}</div>
+                        <div>
+                            ${v.status === "notified"
+                                ? "<strong style='color:#1b4cd4;'>Notified</strong>"
+                                : (overdue > 0
+                                    ? overdue+" mins overdue"
+                                    : "On time")}
+                        </div>
                         <div style="font-size:12px;opacity:0.7;">
                             In: ${checkIn.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}
                         </div>
@@ -642,8 +686,7 @@ function renderQueue(list) {
 
                 </div>
 
-                <!-- Buttons (must NOT trigger modal) -->
-                <div class="entry-actions" onclick="event.stopPropagation();">
+                <div class="entry-actions">
                     <button class="action-btn notify-btn" onclick="notifyVehicle('${v.id}')">Notify</button>
                     <button class="action-btn complete-btn" onclick="completeVehicle('${v.id}')">Complete</button>
                     <button class="action-btn" style="background:#777;" onclick="undoVehicle('${v.id}')">Undo</button>
@@ -654,8 +697,7 @@ function renderQueue(list) {
     });
 }
 </script>
-<!--// END CHUNK C5 — Render Queue -->
-
+<!-- END C5 -->
 
 <!-- START C6 -->
 <script>
@@ -776,60 +818,81 @@ async function undoVehicle(id) {
 
 
 <!-- END SECTION C -->
-
-<!-- START SECTION D -->
-
-<!-- START D1 — Load Activity -->
+<!-- START D1 — Load Activity (400-safe version) -->
 <script>
 async function loadActivity() {
-    const { data } = await db
-        .from("actions_log")
-        .select(`
-            timestamp,
-            action,
-            operators (name),
-            vehicles (registration, po_ref)
-        `)
-        .order("timestamp", { ascending: false })
-        .limit(10);
-
     const panel = document.querySelector(".activity-panel");
     panel.innerHTML = `<h3 style="color:#fff;">Recent Activity</h3><hr style="border-color:#444;">`;
 
-    if (!data || data.length === 0) {
+    // Step 1 — get raw log rows only
+    const { data: logs, error } = await db
+        .from("actions_log")
+        .select("timestamp, action, operator_id, vehicle_id")
+        .order("timestamp", { ascending: false })
+        .limit(20);
+
+    if (error) {
+        panel.innerHTML += `<div style="color:#f55;">Failed to load activity</div>`;
+        return;
+    }
+
+    if (!logs || logs.length === 0) {
         panel.innerHTML += `<div style="color:#888;">No recent actions</div>`;
         return;
     }
 
-    data.forEach(a => {
-        const t = new Date(a.timestamp).toLocaleTimeString("en-GB");
-        const who = a.operators?.name || "unknown";
-        const reg = a.vehicles?.registration || "?";
-        const po = a.vehicles?.po_ref || "";
+    // Step 2 — lookup operator + vehicle names
+    for (const a of logs) {
+        let name = "unknown";
+        let reg = "unknown";
+        let po  = "";
+
+        if (a.operator_id) {
+            const { data: op } = await db
+                .from("operators")
+                .select("name")
+                .eq("id", a.operator_id)
+                .single();
+
+            if (op) name = op.name;
+        }
+
+        if (a.vehicle_id) {
+            const { data: v } = await db
+                .from("vehicles")
+                .select("registration, po_ref")
+                .eq("id", a.vehicle_id)
+                .single();
+
+            if (v) {
+                reg = v.registration || "unknown";
+                po  = v.po_ref || "";
+            }
+        }
+
+        const t = new Date(a.timestamp)
+            .toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
 
         let label = a.action;
-
-        // NORMALISE UI TEXT
-        if (a.action === "completed") label = "completed";
-        if (a.action === "notified")  label = "notified";
-        if (a.action === "undo")      label = "undo";
+        if (label === "check_in") label = "checked in";
+        if (label === "notified") label = "notified";
+        if (label === "completed") label = "completed";
+        if (label === "undo") label = "undo";
+        if (label === "modal_edit") label = "edited";
 
         panel.innerHTML += `
             <div style="margin-bottom:12px; color:#ddd;">
                 <strong style="font-size:18px;">${reg}</strong>
-                <span style="opacity:0.6; font-size:14px;">(${po})</span><br>
-                <span style="opacity:0.7; font-size:14px;">
-                    ${label} by ${who} — ${t}
+                <span style="opacity:0.6; font-size:14px;">${po}</span><br>
+                <span style="opacity:0.75; font-size:14px;">
+                    ${label} by ${name} — ${t}
                 </span>
             </div>
         `;
-    });
+    }
 }
 </script>
-<!-- END D1 — Load Activity -->
-
-
-
+<!-- END D1 — Load Activity (400-safe version) -->
 
 <!-- START D2 -->
 <script>
@@ -921,7 +984,7 @@ async function searchVehicles() {
 <!-- END D3 -->
 
 
-<!-- START CHUNK D4 — Modal Editor + Dynamic Status Options
+<!-- START D4 -->
 <script>
 async function openModalEditor(id) {
     const { data: v } = await db
@@ -942,8 +1005,11 @@ async function openModalEditor(id) {
             border-radius:6px; 
             background:#1c1c1c; 
             color:#fff;
-            border:1px solid #444; width:180px;"
-        ></select>
+            border:1px solid #444; width:180px;">
+            <option value="waiting"  ${v.status==="waiting"?"selected":""}>waiting</option>
+            <option value="notified" ${v.status==="notified"?"selected":""}>notified</option>
+            <option value="released" ${v.status==="released"?"selected":""}>released</option>
+        </select>
 
         <label style="color:#bbb;">PO / Reference:</label>
         <input id="edit-po-${id}" value="${v.po_ref || ""}" style="
@@ -979,39 +1045,16 @@ async function openModalEditor(id) {
     `;
 
     overlay.style.display = "block";
-
-    // Load statuses dynamically from DB
-    loadStatusOptions(`edit-status-${id}`, v.status);
 }
 
 function closeModal() {
     document.getElementById("editModalOverlay").style.display = "none";
 }
-
-// Fetch statuses from DB and populate dropdown
-async function loadStatusOptions(selectId, current) {
-    const { data: statuses } = await db
-        .from("statuses")
-        .select("name")
-        .order("name");
-
-    const sel = document.getElementById(selectId);
-    sel.innerHTML = "";
-
-    statuses.forEach(s => {
-        sel.innerHTML += `
-            <option value="${s.name}" ${s.name === current ? "selected" : ""}>
-                ${s.name}
-            </option>
-        `;
-    });
-}
 </script>
-<!- END CHUNK D4 — Modal Editor + Dynamic Status Options->
+<!-- END D4 -->
 
 
-
-<! -- START D5 -->
+<!-- START D5 -->
 <script>
 async function saveModalEditor(id) {
     const opId = localStorage.getItem("operator_id");
@@ -1097,5 +1140,4 @@ window.onload = function() {
 </body>
 </html>
 <!-- END END-OF-FILE -->
-
 
