@@ -1,14 +1,17 @@
-﻿<!DOCTYPE html>
+﻿<!-- START CHUNK D — qr-screen.html full file -->
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Vehicle Status</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<!-- START D1 — Styles -->
 <style>
     body {
         margin: 0;
-        background: #f2f4f8;
+        background: #0d0d0d;
+        color: #e6e6e6;
         font-family: Arial, sans-serif;
         padding: 20px;
         text-align: center;
@@ -18,7 +21,7 @@
         font-size: 28px;
         font-weight: bold;
         margin-bottom: 6px;
-        color: #1b4cd4;
+        color: #1b8cff;
     }
     .sub {
         font-size: 16px;
@@ -38,8 +41,9 @@
     .tile {
         padding: 10px 18px;
         border-radius: 10px;
-        background: white;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        background: #1c1c1c;
+        color: #ddd;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.4);
         cursor: pointer;
         user-select: none;
         border: 2px solid transparent;
@@ -47,49 +51,49 @@
     }
 
     .tile:hover {
-        border-color: #1b4cd4;
+        border-color: #1b8cff;
     }
-
     .tile.active {
-        border-color: #1b4cd4;
+        border-color: #1b8cff;
         font-weight: bold;
     }
 
-    /* MAIN CARD */
+    /* CARD */
     .card {
-        background: white;
+        background: #1c1c1c;
         padding: 25px;
         border-radius: 16px;
         margin-bottom: 18px;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+        box-shadow: 0 3px 12px rgba(0,0,0,0.55);
         text-align: left;
         max-width: 600px;
         margin-left: auto;
         margin-right: auto;
+        color: #e6e6e6;
     }
 
     .reg {
         font-size: 24px;
         font-weight: bold;
         margin-bottom: 8px;
+        color: #fff;
     }
 
     .label {
         font-size: 15px;
-        color: #666;
+        color: #ccc;
         margin-bottom: 2px;
         margin-top: 12px;
     }
 
-    /* STATUS COLOURS */
     .status {
         font-size: 22px;
         font-weight: bold;
         margin-top: 6px;
     }
-    .waiting { color: #d97706; }  /* amber */
-    .loading { color: #1b4cd4; }  /* blue  */
-    .ready   { color: #16a34a; }  /* green */
+    .waiting { color: #f59e0b; }
+    .loading { color: #1b8cff; }
+    .ready   { color: #22c55e; }
 
     .note {
         margin-top: 12px;
@@ -97,14 +101,16 @@
         opacity: 0.85;
     }
 </style>
+<!-- END D1 -->
 </head>
+
 <body>
 
-<!-- TITLE -->
+<!-- START D2 — Page Structure -->
 <div id="title" class="title">Vehicle Status</div>
 <div id="subtitle" class="sub">Updates refresh every few seconds</div>
 
-<!-- LANGUAGE TILES -->
+<!-- Language tiles -->
 <div class="lang-row" id="langRow">
     <div class="tile active" data-lang="en">🇬🇧 English</div>
     <div class="tile" data-lang="pl">🇵🇱 Polski</div>
@@ -113,7 +119,7 @@
     <div class="tile" data-lang="cs">🇨🇿 Čeština</div>
 </div>
 
-<!-- VEHICLE CARD -->
+<!-- Vehicle card -->
 <div class="card">
     <div id="reg" class="reg"></div>
 
@@ -128,17 +134,17 @@
 
     <div id="noteText" class="note"></div>
 </div>
+<!-- END D2 -->
 
-
-<!-- SUPABASE LIVE DATA VERSION -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- START D3 — Translations -->
 <script>
 const db = supabase.createClient(
   "https://splcucorowqjxeeseolq.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwbGN1Y29yb3dxanhlZXNlb2xxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTExMjUsImV4cCI6MjA3ODYyNzEyNX0.R-Fm04UtBOr9OBWHnS1fhk6SnfSm7f3ZrFrQdzO1Q4Y"
 );
 
-// TRANSLATIONS
 const T = {
     en: {
         title: "Vehicle Status",
@@ -151,7 +157,7 @@ const T = {
         ready: "Proceed to gatehouse",
         note: "Please remain in your cab unless instructed."
     },
-    pl: { 
+    pl: {
         title: "Status Twojego Pojazdu",
         subtitle: "Aktualizacje co kilka sekund",
         po: "PO / Numer referencyjny",
@@ -168,7 +174,7 @@ const T = {
         po: "PO / Referință",
         pager: "Număr pager",
         status: "Stare curentă",
-        waiting: "Așteptați în parcarea pentru camioane",
+        waiting: "Așteptați în parcarea camioanelor",
         loading: "Mergeți spre zona de încărcare",
         ready: "Mergeți la poartă",
         note: "Rămâneți în cabină până la noi instrucțiuni."
@@ -189,7 +195,7 @@ const T = {
         subtitle: "Pravidelně aktualizováno",
         po: "PO / Reference",
         pager: "Číslo pageru",
-        status: "Aktuální stav",
+        status: "Aktuální Stav",
         waiting: "Čekejte na parkovišti",
         loading: "Přejděte do nakládací zóny",
         ready: "Přejděte k bráně",
@@ -200,29 +206,6 @@ const T = {
 let currentLang = "en";
 let currentStatus = "waiting";
 
-// LOAD LIVE DATA
-async function loadVehicle() {
-    const params = new URLSearchParams(window.location.search);
-    const vehicleId = params.get("vehicle");
-    if (!vehicleId) return;
-
-    const { data, error } = await db
-        .from("vehicles")
-        .select("*")
-        .eq("id", vehicleId)
-        .single();
-
-    if (!data) return;
-
-    document.querySelector(".reg").textContent = data.registration;
-    document.getElementById("poValue").textContent = data.po_ref || "-";
-    document.getElementById("pagerValue").textContent = data.pager_number || "-";
-
-    currentStatus = data.status; // waiting / notified / released
-    setLang(currentLang);
-}
-
-// APPLY LANGUAGE
 function setLang(lang) {
     const L = T[lang];
     currentLang = lang;
@@ -236,29 +219,52 @@ function setLang(lang) {
 
     const st = document.getElementById("statusValue");
 
-    if (currentStatus === "waiting")
-        st.textContent = L.waiting;
+    if (currentStatus === "waiting")   st.textContent = L.waiting;
+    if (currentStatus === "notified")  st.textContent = L.loading;
+    if (currentStatus === "released")  st.textContent = L.ready;
 
-    if (currentStatus === "notified")
-        st.textContent = L.loading;
-
-    if (currentStatus === "released")
-        st.textContent = L.ready;
+    document.getElementById("noteText").textContent = L.note;
 }
 
-// LANGUAGE TILE CLICK
 document.querySelectorAll(".tile").forEach(tile => {
-    tile.addEventListener("click", () => {
-        setLang(tile.dataset.lang);
-    });
+    tile.addEventListener("click", () => setLang(tile.dataset.lang));
 });
+</script>
+<!-- END D3 -->
 
-// RUN
+<!-- START D4 — Live loader -->
+<script>
+async function loadVehicle() {
+    const params = new URLSearchParams(window.location.search);
+    const vehicleId = params.get("vehicle");
+    if (!vehicleId) return;
+
+    const { data } = await db
+        .from("vehicles")
+        .select("*")
+        .eq("id", vehicleId)
+        .single();
+
+    if (!data) return;
+
+    document.getElementById("reg").textContent = data.registration;
+    document.getElementById("poValue").textContent = data.po_ref || "-";
+    document.getElementById("pagerValue").textContent = data.pager_number || "-";
+
+    currentStatus = data.status;
+    setLang(currentLang);
+}
+</script>
+<!-- END D4 -->
+
+<!-- START D5 — Init -->
+<script>
+setLang("en");
 loadVehicle();
 setInterval(loadVehicle, 8000);
-setLang("en");
 </script>
-
+<!-- END D5 -->
 
 </body>
 </html>
+<!-- END CHUNK D -->
